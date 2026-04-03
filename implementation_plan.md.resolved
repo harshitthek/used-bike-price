@@ -1,30 +1,96 @@
-# Used Bike Price Prediction — Major Overhaul Plan
+# Used Bike Price Prediction — Implementation Plan
 
-Transform the current toy demo (10-row inline data, single LinearRegression) into a production-quality ML project with real data, proper structure, multiple models, evaluation, and a usable prediction interface.
-
----
-
-## Phase 1 — Project Structure & Data Pipeline ✅
-*Deleted synthetic data and integrated real Droom.in dataset (32,648 raw rows).*
-*Built `data_loader.py` and `preprocessing.py` to handle deduplication, outlier removal, and missing values.*
-*Total clean dataset: 7,007 rows.*
+Transform the original toy demo (10-row inline data, single LinearRegression) into a production-quality ML project with real data, proper modular architecture, multiple models, automated evaluation, hyperparameter tuning, and a full-stack web interface.
 
 ---
 
-## Phase 2-4 — Modeling, Evaluation & Outputs ✅
-*Tested six distinct regression algorithms via 5-fold CV.*
-*Best base model: Gradient Boosting (R² ~ 0.90).*
-*Generated automatic evaluation plots (Residuals, Feature Importance, Model Comparison).*
+## Phase 1 — Data Pipeline & Project Structure ✅
+
+**Problem**: The original project had synthetic/AI-generated data (200 rows, suspicious price distributions) that would produce a misleading model.
+
+**What we did**:
+- Deleted the synthetic `bike_data.csv`
+- Sourced and integrated a real Kaggle dataset scraped from Droom.in (32,648 raw rows)
+- Built `src/data_loader.py` with auto-discovery and schema validation
+- Built `src/preprocessing.py` with a 10-step cleaning pipeline (deduplication, type coercion, missing value handling, age capping, IQR outlier removal, rare brand filtering, ordinal encoding)
+- **Result**: 7,007 high-quality, unique rows with 6 features
 
 ---
 
-## Phase 5 — Hyperparameter Tuning (NEW) ✅
-*Implemented `RandomizedSearchCV` in `src/models.py` to systematically search for the optimal learning rate, tree depth, and estimator count.*
-*By tuning the GradientBoosting & XGBoost algorithms, we successfully pushed the accuracy and stabilized the variance, ensuring our R² holds over 90.6% on unseen data, while dropping the Mean Absolute Error (MAE).*
+## Phase 2 — Multi-Model Training ✅
+
+**What we did**:
+- Built `src/models.py` with a model registry containing 6 regressors: LinearRegression, Ridge, Lasso, RandomForest, GradientBoosting, XGBoost
+- Each model wrapped in a scikit-learn `Pipeline` with `ColumnTransformer` (OneHotEncoder for categoricals, StandardScaler for numerics)
+- 5-fold cross-validation for fair comparison
+- **Result**: XGBoost best at CV R² = 0.9122, GradientBoosting close behind at 0.9109
 
 ---
 
-## Phase 6 — Full Stack Web Application (NEW) ✅
-*Replaced the terminal-only interaction with a modern web stack.*
-*FastAPI (`src/api.py`) serves the tuned model over a `/predict` REST endpoint.*
-*React frontend (`frontend/`) initialized with Vite provides an interactive, beautiful interface for the user to select parameters and immediately see the AI's predicted price.*
+## Phase 3 — Evaluation & Outputs ✅
+
+**What we did**:
+- Built `src/evaluation.py` with four metrics: R², MAE, RMSE, MAPE
+- Automated generation of three seaborn/matplotlib plots:
+  - `model_comparison.png` — R² and MAE bar charts for all models
+  - `residuals.png` — Predicted vs Actual, residual distribution, residuals vs predicted
+  - `feature_importance.png` — Tree-based feature importance (power/cc dominates)
+- Results saved to `outputs/evaluation_results.json`
+
+---
+
+## Phase 4 — Config & Cleanup ✅
+
+**What we did**:
+- Updated `requirements.txt` with all dependencies (scikit-learn, pandas, numpy, joblib, matplotlib, seaborn, xgboost, fastapi, uvicorn, pydantic)
+- Updated `Dockerfile` to copy data/ and create output directories
+- Fixed `.vscode/tasks.json` paths (were hardcoded to wrong directory)
+- Configured `.gitignore` for models/, outputs/, and Python artifacts
+
+---
+
+## Phase 5 — Hyperparameter Tuning ✅
+
+**What we did**:
+- Added `tune_best_model()` to `src/models.py` using `RandomizedSearchCV`
+- Supports tuning for GradientBoosting, XGBoost, and RandomForest
+- Search space: learning_rate, max_depth, n_estimators, min_child_weight/min_samples_leaf
+- 10 random combinations, 3-fold CV for speed
+- Integrated into the main training pipeline in `src/main.py`
+
+**Before tuning (base XGBoost)**: CV R² = 0.9122, Test R² = 0.9109
+**After tuning**: Confirmed near-optimal base parameters. Final Test R² = 0.9109, MAE = ₹10,213
+
+---
+
+## Phase 6 — Full-Stack Web Application ✅
+
+**What we did**:
+
+### Backend (`src/api.py`)
+- FastAPI application with CORS middleware
+- Loads `best_model.joblib` at server startup
+- `POST /predict` endpoint with Pydantic schema validation
+- `GET /health` endpoint for status checks
+- Error handling for missing model and invalid inputs
+
+### Frontend (`frontend/`)
+- React app scaffolded with Vite
+- Framer Motion for animated panel entrances and state transitions
+- Lucide React for consistent SVG iconography
+- Custom CSS range sliders for power, age, and kilometers
+- Dark-mode design with animated aurora background orbs
+- Responsive layout (collapses to single column on mobile)
+
+---
+
+## Final Test-Set Results
+
+| Model | R² | MAE (₹) | RMSE (₹) | MAPE |
+|---|---|---|---|---|
+| **XGBoost (tuned)** | **0.9109** | **₹10,213** | **₹14,943** | **18.3%** |
+| GradientBoosting | 0.9063 | ₹10,129 | ₹15,326 | 18.0% |
+| RandomForest | 0.8875 | ₹10,563 | ₹16,795 | 18.2% |
+| LinearRegression | 0.7960 | ₹15,422 | ₹22,613 | 30.6% |
+| Ridge | 0.7960 | ₹15,417 | ₹22,612 | 30.6% |
+| Lasso | 0.7960 | ₹15,419 | ₹22,611 | 30.6% |

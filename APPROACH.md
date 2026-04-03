@@ -6,7 +6,7 @@ A detailed walkthrough of how this project was built, the decisions we made, and
 
 ## 1. Problem Statement
 
-**Goal**: Build a machine learning model that can predict the resale price of a used motorcycle/bike in India, given features like brand, kilometers driven, age, engine power, and ownership history.
+**Goal**: Build a machine learning model that can predict the resale price of a used motorcycle in India, given features like brand, kilometers driven, age, engine power, and ownership history.
 
 **Why this matters**: India has a massive used two-wheeler market. Having an accurate price predictor helps both buyers (avoid overpaying) and sellers (price competitively).
 
@@ -113,42 +113,93 @@ After preprocessing, our feature set:
 
 ---
 
-## 5. Phase 2 & 3 — Modeling Strategy & Outputs (Completed)
+## 5. Phase 2 — Multi-Model Training & Comparison
 
-We built an automated baseline regression pipeline training six algorithms simultaneously:
-- **LinearRegression / Ridge / Lasso** (Baseline linear models)
-- **RandomForest / GradientBoosting / XGBoost** (Tree-based ensemble models)
+### Why Multiple Models?
 
-**Evaluation Metrics**: MAE, RMSE, R², MAPE
-**Winner**: GradientBoosting and XGBoost consistently returned accuracy outputs of R² > 0.90, confirming that tabular real-world bike data has non-linear complexity better served by tree ensembles.
+Different algorithms have different strengths:
 
-Automatic plots (Residuals, Feature Importance, Comparison charts) were dumped to `outputs/` alongside specialized JSON validation outputs.
+| Model | Strength | Weakness |
+|---|---|---|
+| LinearRegression | Fast, interpretable | Can't capture non-linear patterns |
+| Ridge / Lasso | Handles multicollinearity from one-hot encoding | Still linear |
+| RandomForest | Non-linear, robust, feature importance | Can overfit with deep trees |
+| GradientBoosting | Strong accuracy on tabular data | Slower to train |
+| XGBoost | Optimized gradient boosting with regularization | Additional dependency |
+
+We trained all six, evaluated via 5-fold cross-validation, then tested on a held-out 20% test set.
+
+### Results
+
+| Model | CV R² (mean ± std) | Test R² | Test MAE (₹) |
+|---|---|---|---|
+| **XGBoost** | **0.9122 ± 0.004** | **0.9109** | **₹10,213** |
+| GradientBoosting | 0.9109 ± 0.003 | 0.9063 | ₹10,129 |
+| RandomForest | 0.8969 ± 0.011 | 0.8875 | ₹10,563 |
+| Ridge | 0.8299 ± 0.008 | 0.7960 | ₹15,417 |
+| LinearRegression | 0.8299 ± 0.008 | 0.7960 | ₹15,422 |
+| Lasso | 0.8299 ± 0.008 | 0.7960 | ₹15,419 |
+
+**Takeaway**: Tree-based models (XGBoost, GradientBoosting, RandomForest) vastly outperform linear models on this dataset. The non-linear relationship between engine power, age, brand, and price is something linear models simply can't capture.
 
 ---
 
-## 6. Phase 4 & 5 — Containerization and Optimization (Completed)
+## 6. Phase 3 — Hyperparameter Tuning
 
-We implemented an aggressive automated Hyperparameter Tuning pass (`RandomizedSearchCV`) targeted explicitly at the winning model. By iterating across deep learning grids (estimators, max depth, learning rates), we extracted peak performance and persisted the optimally weighted model to `models/best_model.joblib`. 
-Docker artifacts, `requirements.txt`, and runtime scripts were solidified to guarantee system stability and immediate execution.
+After selecting XGBoost as the best base model, we ran `RandomizedSearchCV` to optimize its hyperparameters:
 
----
+**Search space**:
+- `learning_rate`: [0.01, 0.05, 0.1, 0.2]
+- `max_depth`: [3, 5, 7]
+- `n_estimators`: [100, 200, 300]
+- `min_child_weight`: [1, 3, 5]
 
-## 7. Phase 6 — Full Stack UI/UX Dashboard (Completed)
-
-The project outgrew the terminal-only CLI script. 
-
-**Backend**: We created `src/api.py` utilizing the asynchronous `FastAPI` framework to securely expose a `/predict` REST endpoint. 
-**Frontend**: We constructed an ultra-premium React SPA (Single Page Application) utilizing Vite. We explicitly integrated advanced design capabilities (`framer-motion` for complex animated layout shifts and `lucide-react` for polished iconography). We transitioned standard data-entry fields into beautifully styled pure CSS interactive Range sliders inside of a dark-mode animated Aurora background.
+We tested 10 random combinations with 3-fold CV. The tuning confirmed that the default parameters were already near-optimal for this dataset size, with the final tuned model achieving R² = 0.9109 on the test set.
 
 ---
 
-## Technical Decisions Log
+## 7. Phase 4 — Evaluation & Visualization
+
+Three automated plots are generated during each training run:
+
+1. **Model Comparison** (`outputs/model_comparison.png`) — Side-by-side R² and MAE bar charts for all six models
+2. **Residual Analysis** (`outputs/residuals.png`) — Predicted vs. Actual scatter, residual distribution histogram, and residuals vs. predicted values
+3. **Feature Importance** (`outputs/feature_importance.png`) — Shows that `power` (cc) dominates, followed by `age` and `kms_driven`
+
+All metrics are also saved to `outputs/evaluation_results.json` for programmatic access.
+
+---
+
+## 8. Phase 5 — Full-Stack Web Application
+
+The project outgrew the terminal CLI, so we added a web interface:
+
+**Backend** (`src/api.py`):
+- FastAPI with CORS middleware
+- Loads `best_model.joblib` at startup
+- Exposes `POST /predict` endpoint with Pydantic request validation
+- Returns estimated price in INR
+
+**Frontend** (`frontend/`):
+- React app bootstrapped with Vite
+- Uses `framer-motion` for entrance animations and state transitions
+- Uses `lucide-react` for SVG icons
+- Custom CSS range sliders for Engine Power, Age, and KMS inputs
+- Dark-mode design with animated gradient orbs in the background
+
+---
+
+## 9. Technical Decisions Log
 
 | Decision | Choice | Why |
 |---|---|---|
 | Outlier method | IQR with 3× factor | Conservative — only removes extreme outliers |
 | Age limit | 30 years | Real outlier found (63yr), 30 is generous enough |
-| Train/test split | 80/20, stratified | Standard, enough test data for reliable evaluation |
+| Rare brand threshold | < 5 samples | Too few to learn from, would just add noise |
+| Train/test split | 80/20 | Standard, enough test data for reliable evaluation |
 | Cross-validation | 5-fold | Good balance of bias/variance estimation |
-| Hyperparameter Tuning | RandomizedSearchCV | More computationally efficient than strict GridSearch |
-| UI Architecture | Framer Motion + Vanilla CSS | Avoided Tailwind bundle weight while retaining dynamic glassmorphic interaction principles |
+| Hyperparameter tuning | RandomizedSearchCV (10 iter, 3-fold) | Faster than exhaustive GridSearchCV on small gains |
+| Owner encoding | Ordinal (1→5) | Natural ordering: 1st owner > 2nd > 3rd |
+| GPU / Colab | Not needed | scikit-learn is CPU-only, 7K rows trains in seconds |
+| Frontend framework | React + Vite | Fast HMR, component-based architecture |
+| API framework | FastAPI | Async, auto-generated docs, Pydantic validation |
