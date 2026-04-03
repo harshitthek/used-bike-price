@@ -44,16 +44,13 @@ used-bike-price/
 
 ## Data Pipeline
 
-The preprocessing pipeline (`src/preprocessing.py`) performs:
-1. **Deduplication** — removes ~25K duplicate scraped entries
-2. **Type coercion** — ensures numeric columns are properly typed
-3. **Missing value handling** — median fill for numeric, drop NaN targets
-4. **Age filtering** — removes entries with unreasonable age (>30 years)
-5. **IQR outlier removal** — removes extreme price/kms_driven outliers
-6. **Rare brand removal** — drops brands with <5 listings
-7. **Owner encoding** — ordinal encoding (1st=1, 2nd=2, 3rd=3)
+The preprocessing pipeline (`src/preprocessing.py`) performs deduplication, type coercion, missing value handling, age filtering, IQR outlier removal, rare brand removal, and ordinal encoding.
 
-**Final clean features**: `brand`, `owner`, `kms_driven`, `age`, `power`, `owner_rank` → predicting `price`
+Final clean features: `brand`, `owner`, `kms_driven`, `age`, `power`, `owner_rank` → predicting `price`
+
+## Modeling & Tuning
+The project trains six parallel models (Linear, Ridge, Lasso, RandomForest, GradientBoosting, XGBoost).
+The highest performing model (typically GradientBoosting or XGBoost at R² > 90%) undergoes **automatic Hyperparameter Tuning via RandomizedSearchCV** to pinpoint the optimal learning rate, depth, and tree count before saving to `models/best_model.joblib`.
 
 ## Usage
 

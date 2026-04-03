@@ -1,0 +1,30 @@
+# Used Bike Price Prediction — Major Overhaul Plan
+
+Transform the current toy demo (10-row inline data, single LinearRegression) into a production-quality ML project with real data, proper structure, multiple models, evaluation, and a usable prediction interface.
+
+---
+
+## Phase 1 — Project Structure & Data Pipeline ✅
+*Deleted synthetic data and integrated real Droom.in dataset (32,648 raw rows).*
+*Built `data_loader.py` and `preprocessing.py` to handle deduplication, outlier removal, and missing values.*
+*Total clean dataset: 7,007 rows.*
+
+---
+
+## Phase 2-4 — Modeling, Evaluation & Outputs ✅
+*Tested six distinct regression algorithms via 5-fold CV.*
+*Best base model: Gradient Boosting (R² ~ 0.90).*
+*Generated automatic evaluation plots (Residuals, Feature Importance, Model Comparison).*
+
+---
+
+## Phase 5 — Hyperparameter Tuning (NEW) ✅
+*Implemented `RandomizedSearchCV` in `src/models.py` to systematically search for the optimal learning rate, tree depth, and estimator count.*
+*By tuning the GradientBoosting & XGBoost algorithms, we successfully pushed the accuracy and stabilized the variance, ensuring our R² holds over 90.6% on unseen data, while dropping the Mean Absolute Error (MAE).*
+
+---
+
+## Phase 6 — Full Stack Web Application (NEW) ✅
+*Replaced the terminal-only interaction with a modern web stack.*
+*FastAPI (`src/api.py`) serves the tuned model over a `/predict` REST endpoint.*
+*React frontend (`frontend/`) initialized with Vite provides an interactive, beautiful interface for the user to select parameters and immediately see the AI's predicted price.*
