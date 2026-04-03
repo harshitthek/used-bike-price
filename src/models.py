@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -141,3 +141,58 @@ def get_best_model(
     """Return the name and pipeline of the best model by CV R²."""
     best_name = cv_results.iloc[0]["model"]
     return best_name, pipelines[best_name]
+
+
+def tune_best_model(
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    best_name: str,
+    best_pipe: Pipeline,
+) -> Pipeline:
+    """Run hyperparameter tuning on the best model.
+    Only supports tree-based models right now.
+    """
+    if best_name not in ["GradientBoosting", "XGBoost", "RandomForest"]:
+        print(f"  Skipping tuning for {best_name} — currently only tree models are tuned.")
+        return best_pipe
+
+    print(f"\n  Tuning {best_name}...")
+
+    param_grid = {}
+    if best_name == "GradientBoosting":
+        param_grid = {
+            "model__learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "model__max_depth": [3, 5, 7],
+            "model__n_estimators": [100, 200, 300],
+            "model__min_samples_leaf": [2, 5, 10],
+        }
+    elif best_name == "XGBoost":
+        param_grid = {
+            "model__learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "model__max_depth": [3, 5, 7],
+            "model__n_estimators": [100, 200, 300],
+            "model__min_child_weight": [1, 3, 5],
+        }
+    elif best_name == "RandomForest":
+        param_grid = {
+            "model__max_depth": [10, 15, 20, None],
+            "model__n_estimators": [100, 200, 300],
+            "model__min_samples_leaf": [2, 5, 10],
+        }
+
+    search = RandomizedSearchCV(
+        best_pipe,
+        param_distributions=param_grid,
+        n_iter=10,  # 10 random combinations
+        cv=3,       # 3-fold CV for speed
+        scoring="r2",
+        n_jobs=-1,
+        random_state=42,
+    )
+
+    search.fit(X_train, y_train)
+
+    print(f"  Tuned R²: {search.best_score_:.4f}")
+    print(f"  Best params: {search.best_params_}")
+
+    return search.best_estimator_

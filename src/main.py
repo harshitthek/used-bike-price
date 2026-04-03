@@ -27,7 +27,7 @@ from src.preprocessing import (
     NUMERIC_FEATURES,
     TARGET,
 )
-from src.models import train_and_compare, get_best_model
+from src.models import train_and_compare, get_best_model, tune_best_model
 from src.evaluation import (
     evaluate_on_test,
     plot_model_comparison,
@@ -86,7 +86,7 @@ def run_train(data_path: str | None = None):
     )
     print(f"  Train: {len(X_train):,} rows  |  Test: {len(X_test):,} rows")
 
-    # ── 4. Train all models ────────────────────────────────────
+    # ── 4. Train all base models ───────────────────────────────
     pipelines, cv_results = train_and_compare(
         X_train, y_train,
         categorical_features=cat_features,
@@ -94,11 +94,20 @@ def run_train(data_path: str | None = None):
         cv_folds=5,
     )
 
-    # ── 5. Evaluate on test set ────────────────────────────────
-    test_results = evaluate_on_test(pipelines, X_test, y_test)
+    # ── 5. Get best model & Tune ───────────────────────────────
+    best_name, best_pipe = get_best_model(pipelines, cv_results)
+    
+    print("\n" + "=" * 60)
+    print("  HYPERPARAMETER TUNING")
+    print("=" * 60)
+    best_pipe_tuned = tune_best_model(X_train, y_train, best_name, best_pipe)
+    pipelines[best_name] = best_pipe_tuned
 
-    # ── 6. Get best model ──────────────────────────────────────
-    best_name, best_pipe = get_best_model(pipelines, test_results)
+    # ── 6. Evaluate on test set ────────────────────────────────
+    test_results = evaluate_on_test(pipelines, X_test, y_test)
+    
+    # Since we tuned the best model, make sure we use it moving forward
+    best_pipe = pipelines[best_name]
 
     # ── 7. Generate plots ──────────────────────────────────────
     print("\n  Generating plots...")

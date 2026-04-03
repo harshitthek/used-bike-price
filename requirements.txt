@@ -5,3 +5,5 @@ joblib
 matplotlib
 seaborn
 xgboost
+fastapi
+uvicorn

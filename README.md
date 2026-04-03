@@ -55,10 +55,36 @@ The preprocessing pipeline (`src/preprocessing.py`) performs:
 
 **Final clean features**: `brand`, `owner`, `kms_driven`, `age`, `power`, `owner_rank` → predicting `price`
 
-## VS Code
+## Usage
 
-- Select the Python interpreter from the `.venv` in this workspace.
-- Use Run and Debug: "Python: Run main.py" to execute the script.
+### 1. Interactive CLI (Predict in terminal)
+Run the script in predict mode. It loads the best saved model and prompts for input.
+```powershell
+.venv\Scripts\python.exe src/main.py --predict
+```
+
+### 2. Full Stack Web App (React + FastAPI)
+We built a beautiful, glassmorphic UI to interact with the model in real time!
+
+**Start the Backend (Terminal 1)**:
+```powershell
+# Activates the API on http://127.0.0.1:8000
+.venv\Scripts\python.exe -m uvicorn src.api:app --reload
+```
+
+**Start the Frontend (Terminal 2)**:
+```powershell
+cd frontend
+npm install
+npm run dev
+# Open the localhost URL provided in your browser!
+```
+
+### 3. Complete Retraining
+To run the full data pipeline, cross-validation model comparison, and hyperparameter tuning all over again:
+```powershell
+.venv\Scripts\python.exe src/main.py
+```
 
 ## Docker
 
