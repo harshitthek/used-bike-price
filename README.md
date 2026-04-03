@@ -35,8 +35,8 @@ used-bike-price/
 │   ├── main.py                  # CLI entry point (train & predict)
 │   ├── data_loader.py           # Load & validate CSV data
 │   ├── preprocessing.py         # Clean, deduplicate, feature engineering
-│   ├── models.py                # Model definitions (coming soon)
-│   └── evaluation.py            # Metrics & visualizations (coming soon)
+│   ├── models.py                # Multi-model pipelines & hyperparameter tuning
+│   └── evaluation.py            # Metrics & ggplot-style visualizations
 ├── requirements.txt
 ├── Dockerfile
 └── README.md
@@ -60,8 +60,10 @@ Run the script in predict mode. It loads the best saved model and prompts for in
 .venv\Scripts\python.exe src/main.py --predict
 ```
 
-### 2. Full Stack Web App (React + FastAPI)
-We built a beautiful, glassmorphic UI to interact with the model in real time!
+### 2. Full Stack Web App (React + Vite + Framer Motion)
+We built a premium, dynamic web dashboard to interact with the neural net in real time!
+- **Frontend Architecture**: React + Vite, heavily utilizing `framer-motion` for complex layout shifts and `lucide-react` for high-end SVG iconography. It replaces clunky system inputs with heavily styled pure CSS Range sliders.
+- **Backend Architecture**: FastAPI and Uvicorn provide a lightning-fast async REST `/predict` endpoint that executes the persisted `best_model.joblib`.
 
 **Start the Backend (Terminal 1)**:
 ```powershell

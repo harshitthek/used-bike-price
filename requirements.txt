@@ -7,3 +7,4 @@ seaborn
 xgboost
 fastapi
 uvicorn
+pydantic
