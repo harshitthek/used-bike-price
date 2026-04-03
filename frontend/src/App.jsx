@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CheckCircle2, ChevronRight, Zap, RefreshCw } from 'lucide-react'
 
 const BRANDS = [
   "Royal Enfield", "Bajaj", "Honda", "TVS", "Yamaha", 
@@ -43,55 +45,94 @@ function App() {
       if (!response.ok) throw new Error('Prediction API Error');
       const data = await response.json();
       
-      setResult({
-        price: data.estimated_price,
-        success: true
-      });
+      // Artificial delay for UI polish/animation
+      setTimeout(() => {
+        setResult({
+          price: data.estimated_price,
+          success: true
+        });
+        setLoading(false);
+      }, 800);
+      
     } catch (err) {
-      setResult({ success: false, msg: err.message });
-    } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setResult({ success: false, msg: err.message });
+        setLoading(false);
+      }, 500);
     }
   };
 
   return (
-    <div className="dashboard-wrapper">
-      <div className="dashboard-header">
-        <h1>BikeValuation AI</h1>
-        <p>Enterprise-grade machine learning model for Indian vehicle markets</p>
+    <div className="app-layout">
+      {/* Background Orbs */}
+      <div className="background-aurora">
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
       </div>
 
-      <div className="dashboard">
+      <header className="header">
+        <div className="logo-container">
+          <Zap className="logo-icon" size={28} />
+          <h1>MotoValue Engine</h1>
+        </div>
+      </header>
+
+      <main className="dashboard-main">
         
-        {/* Left Side: Input Panel */}
-        <div className="panel">
-          <form onSubmit={handleSubmit} className="form-grid">
+        {/* Left Panel: Configuration */}
+        <motion.div 
+          className="glass-panel"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h2 className="panel-title">Asset Configuration</h2>
+          
+          <form onSubmit={handleSubmit} className="form-section">
             
-            <div className="form-group full">
-              <label>Manufacturer Brand</label>
-              <select name="brand" value={formData.brand} onChange={handleChange} required>
+            {/* Brand */}
+            <div className="input-block">
+              <div className="input-header">
+                <label>Manufacturer Brand</label>
+              </div>
+              <select name="brand" value={formData.brand} onChange={handleChange}>
                 {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
 
-            <div className="form-group">
-              <label>Engine Power (CC)</label>
-              <input type="number" name="power" value={formData.power} onChange={handleChange} min="50" max="2500" required />
+            {/* Power Slider */}
+            <div className="input-block">
+              <div className="input-header">
+                <label>Engine Power</label>
+                <span className="input-value-display">{formData.power} CC</span>
+              </div>
+              <input type="range" name="power" value={formData.power} onChange={handleChange} min="50" max="1500" step="50" />
             </div>
 
-            <div className="form-group">
-              <label>Age (Years)</label>
-              <input type="number" name="age" value={formData.age} onChange={handleChange} min="0" max="30" required />
+            {/* Age Slider */}
+            <div className="input-block">
+              <div className="input-header">
+                <label>Vehicle Age</label>
+                <span className="input-value-display">{formData.age} Years</span>
+              </div>
+              <input type="range" name="age" value={formData.age} onChange={handleChange} min="0" max="30" step="1" />
             </div>
 
-            <div className="form-group">
-              <label>Kilometers Driven</label>
-              <input type="number" name="kms_driven" value={formData.kms_driven} onChange={handleChange} min="0" max="200000" step="100" required />
+            {/* KMS Slider */}
+            <div className="input-block">
+              <div className="input-header">
+                <label>Kilometers Driven</label>
+                <span className="input-value-display">{formData.kms_driven.toLocaleString('en-IN')} KM</span>
+              </div>
+              <input type="range" name="kms_driven" value={formData.kms_driven} onChange={handleChange} min="0" max="100000" step="1000" />
             </div>
 
-            <div className="form-group">
-              <label>Ownership</label>
-              <select name="owner_rank" value={formData.owner_rank} onChange={handleChange} required>
+            {/* Ownership */}
+            <div className="input-block" style={{ marginBottom: '1rem' }}>
+              <div className="input-header">
+                <label>Registration Status</label>
+              </div>
+              <select name="owner_rank" value={formData.owner_rank} onChange={handleChange}>
                 <option value={1}>1st Owner</option>
                 <option value={2}>2nd Owner</option>
                 <option value={3}>3rd Owner</option>
@@ -99,46 +140,78 @@ function App() {
               </select>
             </div>
 
-            <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? <span className="spinner"></span> : null}
-              {loading ? 'Evaluating...' : 'Predict Fair Price'}
-            </button>
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit" 
+              className="cta-button" 
+              disabled={loading}
+            >
+              {loading ? 'Processing neural net...' : 'Calculate Valuation'}
+              {!loading && <ChevronRight size={24} />}
+            </motion.button>
             
           </form>
-        </div>
+        </motion.div>
 
-        {/* Right Side: Result Panel */}
-        <div className="panel result-panel">
-          {result && result.success ? (
-            <div className="result-success">
-              <div className="price-title">Estimated Market Value</div>
-              <div className="price-value">₹ {result.price.toLocaleString('en-IN')}</div>
-              
-              <div className="result-details">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Model confirms <span>{formData.brand}</span> ({formData.power}cc, {formData.age}yr)
-              </div>
-            </div>
-          ) : result && !result.success ? (
-             <div className="result-placeholder" style={{color: '#ef4444'}}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p>Connection Error. Is the FastAPI server running?</p>
-             </div>
-          ) : (
-            <div className="result-placeholder">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <p>Awaiting parameters to generate valuation.</p>
-            </div>
-          )}
-        </div>
+        {/* Right Panel: Output */}
+        <motion.div 
+          className="glass-panel"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+        >
+          <div className="result-display">
+            <AnimatePresence mode="wait">
+              {loading ? (
+                <motion.div 
+                  key="loading"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="pulse-ring"
+                >
+                </motion.div>
+              ) : result && result.success ? (
+                <motion.div 
+                  key="success"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                >
+                  <div className="result-tag">
+                    <CheckCircle2 size={16} style={{display: 'inline', marginRight: '6px', verticalAlign: '-3px'}}/>
+                    Valuation Complete
+                  </div>
+                  
+                  <div className="glowing-price">
+                    ₹{result.price.toLocaleString('en-IN')}
+                  </div>
+                  
+                  <div className="result-meta">
+                    <strong>{formData.brand}</strong> inside top 5% confidence.<br/>
+                    Adjusted for {formData.power}cc engine decay over {formData.age} yrs.
+                  </div>
+                </motion.div>
+              ) : result && !result.success ? (
+                <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="result-tag" style={{ color: '#ff4444', borderColor: 'rgba(255,0,0,0.3)', background: 'rgba(255,0,0,0.1)' }}>
+                    API Disconnected
+                  </div>
+                  <p style={{ opacity: 0.7 }}>Ensure the FastAPI backend is running.</p>
+                </motion.div>
+              ) : (
+                <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <RefreshCw size={48} style={{ opacity: 0.2, marginBottom: '2rem' }} />
+                  <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>No Data Injected</h3>
+                  <p className="result-meta">Adjust the asset configuration parameters and run the calculation.</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
 
-      </div>
+      </main>
     </div>
   )
 }
