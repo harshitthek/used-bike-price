@@ -16,9 +16,13 @@ COPY requirements.txt .
 RUN python -m pip install --upgrade pip \
     && pip install -r requirements.txt
 
-# Copy source
+# Copy source and data
 COPY src/ ./src/
+COPY data/ ./data/
 COPY README.md .
+
+# Ensure output directories exist
+RUN mkdir -p models outputs
 
 # Default command runs the training/demo
 ENTRYPOINT ["python", "src/main.py"]

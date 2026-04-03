@@ -1,97 +1,189 @@
+"""Used Bike Price Prediction — CLI Entry Point.
+
+Usage:
+    python src/main.py              Train all models, evaluate, save best
+    python src/main.py --predict    Interactive prediction mode
+"""
 from __future__ import annotations
 
+import argparse
 import os
-from typing import List
+import sys
+from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+# Ensure project root is on path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.data_loader import load_data, describe_data
+from src.preprocessing import (
+    preprocess,
+    get_feature_target_split,
+    CATEGORICAL_FEATURES,
+    NUMERIC_FEATURES,
+    TARGET,
+)
+from src.models import train_and_compare, get_best_model
+from src.evaluation import (
+    evaluate_on_test,
+    plot_model_comparison,
+    plot_residuals,
+    plot_feature_importance,
+    save_results,
+)
+
+MODELS_DIR = PROJECT_ROOT / "models"
+DEFAULT_MODEL_PATH = MODELS_DIR / "best_model.joblib"
 
 
-def build_sample_data() -> pd.DataFrame:
-    # Simple synthetic dataset for used bicycle prices
-    data = [
-        {"brand": "Giant", "mileage": 500, "year": 2022, "price": 550},
-        {"brand": "Trek", "mileage": 1200, "year": 2020, "price": 420},
-        {"brand": "Specialized", "mileage": 300, "year": 2023, "price": 700},
-        {"brand": "Canyon", "mileage": 2000, "year": 2018, "price": 350},
-        {"brand": "Giant", "mileage": 1500, "year": 2019, "price": 380},
-        {"brand": "Trek", "mileage": 800, "year": 2021, "price": 520},
-        {"brand": "Specialized", "mileage": 2500, "year": 2017, "price": 320},
-        {"brand": "Canyon", "mileage": 400, "year": 2022, "price": 560},
-        {"brand": "Giant", "mileage": 2200, "year": 2018, "price": 340},
-        {"brand": "Trek", "mileage": 300, "year": 2023, "price": 680},
-    ]
-    return pd.DataFrame(data)
+def main():
+    parser = argparse.ArgumentParser(description="Used Bike Price Prediction")
+    parser.add_argument("--predict", action="store_true",
+                        help="Run interactive prediction using saved model")
+    parser.add_argument("--data", type=str, default=None,
+                        help="Path to CSV data file (auto-detected if omitted)")
+    args = parser.parse_args()
+
+    if args.predict:
+        run_predict()
+    else:
+        run_train(data_path=args.data)
 
 
-def build_pipeline(categorical: List[str], numeric: List[str]) -> Pipeline:
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("cat", OneHotEncoder(handle_unknown="ignore"), categorical),
-            ("num", StandardScaler(), numeric),
-        ]
-    )
+# ═══════════════════════════════════════════════════════════════
+#  TRAIN MODE
+# ═══════════════════════════════════════════════════════════════
 
-    model = LinearRegression()
+def run_train(data_path: str | None = None):
+    """Full training pipeline: load → preprocess → train → evaluate → save."""
 
-    pipe = Pipeline(steps=[
-        ("pre", preprocessor),
-        ("reg", model),
-    ])
-    return pipe
+    print("\n" + "█" * 60)
+    print("  USED BIKE PRICE PREDICTION — TRAINING PIPELINE")
+    print("█" * 60)
 
+    # ── 1. Load data ───────────────────────────────────────────
+    df_raw = load_data(data_path)
+    describe_data(df_raw)
 
-def train_and_evaluate(df: pd.DataFrame) -> Pipeline:
-    X = df[["brand", "mileage", "year"]]
-    y = df["price"]
+    # ── 2. Preprocess ──────────────────────────────────────────
+    df_clean = preprocess(df_raw)
+    X, y = get_feature_target_split(df_clean)
 
-    pipe = build_pipeline(categorical=["brand"], numeric=["mileage", "year"])
+    # Identify feature types for the pipeline
+    cat_features = [c for c in CATEGORICAL_FEATURES if c in X.columns]
+    num_features = [c for c in NUMERIC_FEATURES + ["owner_rank"] if c in X.columns]
 
+    print(f"\n  Features: {cat_features + num_features}")
+    print(f"  Target: {TARGET}")
+
+    # ── 3. Train/test split ────────────────────────────────────
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.3, random_state=42
+        X, y, test_size=0.2, random_state=42,
+    )
+    print(f"  Train: {len(X_train):,} rows  |  Test: {len(X_test):,} rows")
+
+    # ── 4. Train all models ────────────────────────────────────
+    pipelines, cv_results = train_and_compare(
+        X_train, y_train,
+        categorical_features=cat_features,
+        numeric_features=num_features,
+        cv_folds=5,
     )
 
-    pipe.fit(X_train, y_train)
+    # ── 5. Evaluate on test set ────────────────────────────────
+    test_results = evaluate_on_test(pipelines, X_test, y_test)
 
-    preds = pipe.predict(X_test)
-    mae = mean_absolute_error(y_test, preds)
-    r2 = r2_score(y_test, preds)
+    # ── 6. Get best model ──────────────────────────────────────
+    best_name, best_pipe = get_best_model(pipelines, test_results)
 
-    print("Model performance on hold-out set:")
-    print(f"  MAE: {mae:.2f}")
-    print(f"  R^2: {r2:.3f}")
+    # ── 7. Generate plots ──────────────────────────────────────
+    print("\n  Generating plots...")
+    plot_model_comparison(test_results, cv_results)
+    plot_residuals(best_pipe, X_test, y_test, best_name)
+    plot_feature_importance(best_pipe, X_train, best_name)
 
-    return pipe
+    # ── 8. Save results ────────────────────────────────────────
+    save_results(test_results, cv_results, best_name)
 
+    # ── 9. Save best model ─────────────────────────────────────
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    joblib.dump(best_pipe, DEFAULT_MODEL_PATH)
+    print(f"  Saved best model: {DEFAULT_MODEL_PATH}")
 
-def demo_prediction(pipe: Pipeline):
-    sample = pd.DataFrame([
-        {"brand": "Giant", "mileage": 1500, "year": 2019},
-        {"brand": "Specialized", "mileage": 200, "year": 2023},
+    # ── 10. Demo predictions ───────────────────────────────────
+    print("\n" + "=" * 60)
+    print("  SAMPLE PREDICTIONS")
+    print("=" * 60)
+    samples = pd.DataFrame([
+        {"brand": "Royal Enfield", "owner": "First Owner", "kms_driven": 15000, "age": 3, "power": 350, "owner_rank": 1},
+        {"brand": "Bajaj", "owner": "Second Owner", "kms_driven": 40000, "age": 7, "power": 200, "owner_rank": 2},
+        {"brand": "Honda", "owner": "First Owner", "kms_driven": 5000, "age": 2, "power": 125, "owner_rank": 1},
+        {"brand": "KTM", "owner": "First Owner", "kms_driven": 10000, "age": 4, "power": 390, "owner_rank": 1},
     ])
-    pred = pipe.predict(sample)
-    for row, price in zip(sample.to_dict(orient="records"), pred):
-        print(f"Prediction for {row}: ${price:.2f}")
+    preds = best_pipe.predict(samples)
+    for row, price in zip(samples.to_dict(orient="records"), preds):
+        print(f"  {row['brand']:15s} {row['power']}cc, {row['kms_driven']:,}km, {row['age']}yr, {row['owner']}")
+        print(f"    → Predicted: ₹{price:,.0f}")
+
+    print("\n" + "█" * 60)
+    print("  DONE! All models trained, evaluated, and saved.")
+    print("█" * 60 + "\n")
 
 
-def save_model(pipe: Pipeline, path: str = os.path.join("models", "bike_price_model.joblib")) -> str:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    joblib.dump(pipe, path)
-    print(f"Saved model to {path}")
-    return path
+# ═══════════════════════════════════════════════════════════════
+#  PREDICT MODE
+# ═══════════════════════════════════════════════════════════════
+
+def run_predict():
+    """Interactive prediction using saved model."""
+    if not DEFAULT_MODEL_PATH.exists():
+        print(f"Error: No saved model found at {DEFAULT_MODEL_PATH}")
+        print("Run `python src/main.py` first to train a model.")
+        sys.exit(1)
+
+    pipe = joblib.load(DEFAULT_MODEL_PATH)
+    print("\n" + "=" * 60)
+    print("  USED BIKE PRICE PREDICTOR")
+    print("=" * 60)
+    print("  Enter bike details to get a price estimate.")
+    print("  Type 'quit' to exit.\n")
+
+    while True:
+        try:
+            brand = input("  Brand (e.g. Royal Enfield, Bajaj, Honda): ").strip()
+            if brand.lower() in ("quit", "exit", "q"):
+                break
+
+            power = float(input("  Engine power (cc): ").strip())
+            kms = float(input("  Kilometers driven: ").strip())
+            age = float(input("  Age (years): ").strip())
+            owner_num = int(input("  Owner number (1/2/3): ").strip())
+
+            owner_map = {1: "First Owner", 2: "Second Owner", 3: "Third Owner"}
+            owner = owner_map.get(owner_num, "First Owner")
+
+            sample = pd.DataFrame([{
+                "brand": brand,
+                "owner": owner,
+                "kms_driven": kms,
+                "age": age,
+                "power": power,
+                "owner_rank": owner_num,
+            }])
+
+            pred = pipe.predict(sample)[0]
+            print(f"\n  💰 Estimated Price: ₹{pred:,.0f}\n")
+
+        except (ValueError, KeyboardInterrupt):
+            print("\n  Invalid input. Try again or type 'quit'.\n")
+            continue
+
+    print("  Goodbye!")
 
 
 if __name__ == "__main__":
-    df = build_sample_data()
-    print("Sample data:\n", df.head(), "\n")
-
-    pipe = train_and_evaluate(df)
-    demo_prediction(pipe)
-    save_model(pipe)
+    main()
