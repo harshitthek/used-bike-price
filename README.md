@@ -138,13 +138,21 @@ docker run --rm -it used-bike-price
 | ML Framework | scikit-learn, XGBoost |
 | Data | pandas, numpy |
 | Backend API | FastAPI, Uvicorn, Pydantic |
-| Frontend Core | React, Vite |
-| Frontend UI/UX | Tailwind CSS v4, Framer Motion, Lucide React |
+| Frontend core | React, Vite, shadcn/ui |
+| Frontend UI/UX | Tailwind CSS v4, Framer Motion, Lucide React, Aceternity (MagicUI) |
+| System Testing | Pytest, httpx |
 | Agentic Tools | 21st.dev Magic, UI/UX Pro Max, Anthropic frontend-design, Context7, Stitch |
 
-## Next Steps (V4.1 Roadmap)
+## Production Architecture & Security
 
-1. **shadcn/ui Initialization**: Run `npx shadcn-ui@latest init` within the `frontend` to configure `components.json`.
-2. **Premium Interface Elements**: Use the newly installed 21st.dev Magic and Stitch MCP servers to inject Aceternity/MagicUI components logically replacing standard HTML elements (e.g. animated charts).
-3. **Unit Testing**: Add `pytest` test coverage for the data pipeline (`test_preprocessing.py`) and FastAPI endpoints (`test_api.py`).
-4. **Deployment**: Configure `render.yaml` for backend production deployment and `vercel.json` for frontend web hosting.
+The platform has been hardened for production deployment:
+1. **Rate Limiting**: Integrated `slowapi` to restrict endpoints (e.g., 10 req/minute on inference).
+2. **Authentication**: Injected `X-API-Key` headers via python-dotenv for backend protection.
+3. **Data Integrity**: Pytest covers preprocessing pipeline duplication logic, IQR boundaries, and Pydantic V2 validations (e.g. max engine cc bounds).
+4. **Cinematic UI**: Replaced standard React components with highly polished responsive `framer-motion` physics and glassmorphic designs built via Agentic tooling.
+
+## Deployment
+
+Backend configuration is optimized for `Render.com` or `Heroku` using standard Uvicorn/FastAPI paradigms. 
+Frontend configuration is optimized for Vercel. 
+Environment variables (`API_KEY`, `VITE_API_KEY`) must be synchronized across both hosts.

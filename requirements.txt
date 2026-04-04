@@ -11,3 +11,4 @@ pydantic
 pytest
 slowapi
 python-dotenv
+httpx
