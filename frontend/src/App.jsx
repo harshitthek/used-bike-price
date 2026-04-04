@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { Zap, ChevronRight, CheckCircle2, AlertTriangle, Gauge, Calendar, Road, Users, Bike } from 'lucide-react'
+import { NumberTicker } from "@/components/ui/NumberTicker"
+import { GlassCard } from "@/components/ui/GlassCard"
 
 const BRANDS = [
   "Bajaj", "Benelli", "Ducati", "Harley-Davidson", "Hero", "Honda",
@@ -251,7 +253,7 @@ function App() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="lg:col-span-2 sticky top-24"
           >
-            <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] backdrop-blur-md p-8 min-h-[420px] flex flex-col justify-center glow-border">
+            <GlassCard className="min-h-[420px] flex flex-col justify-center">
               <AnimatePresence mode="wait">
                 {loading ? (
                   <motion.div
@@ -288,8 +290,9 @@ function App() {
                     <p className="text-sm text-[var(--color-text-muted)] mb-2 uppercase tracking-widest font-medium">Estimated Market Value</p>
 
                     <div className="price-reveal">
-                      <p className="text-6xl font-black tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-1">
-                        ₹{result.toLocaleString('en-IN')}
+                      <p className="text-6xl flex items-center justify-center gap-1 font-black tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-1">
+                        <span>₹</span>
+                        <NumberTicker value={result} />
                       </p>
                     </div>
 
@@ -334,7 +337,7 @@ function App() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </GlassCard>
           </motion.div>
         </div>
 
