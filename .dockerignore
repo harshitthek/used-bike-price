@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Data and artifacts
+models/
+*.joblib
+*.pkl
+
+# Dev containers and local only files
+.devcontainer/
