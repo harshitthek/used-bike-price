@@ -4,6 +4,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -23,10 +24,26 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 DEFAULT_MODEL_PATH = MODELS_DIR / "best_model.joblib"
 
+def load_artifacts():
+    global bike_model
+    if not DEFAULT_MODEL_PATH.exists():
+        print(f"Warning: Model not found at {DEFAULT_MODEL_PATH}. Prediction endpoints will fail.")
+        return
+    
+    print(f"Loading model from {DEFAULT_MODEL_PATH}...")
+    bike_model = joblib.load(DEFAULT_MODEL_PATH)
+    print("Model loaded successfully.")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_artifacts()
+    yield
+
 app = FastAPI(
     title="Used Bike Price Predictor API",
     description="API for estimating the resale value of used motorcycles in India",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 limiter = Limiter(key_func=get_remote_address)
@@ -50,26 +67,15 @@ def verify_api_key(x_api_key: str = Header("None")):
         raise HTTPException(status_code=401, detail="Invalid or Missing API Key")
 
 class BikeFeatures(BaseModel):
-    brand: str = Field(..., title="Brand", min_length=2, max_length=50, example="Royal Enfield")
-    power: float = Field(..., title="Engine Power (cc)", ge=50, le=2500, example=350)
-    kms_driven: float = Field(..., title="Kilometers Driven", ge=0, le=999999, example=15000)
-    age: float = Field(..., title="Age (Years)", ge=0, le=50, example=3)
-    owner_rank: int = Field(..., title="Owner Rank (1, 2, 3+)", ge=1, le=5, example=1)
+    brand: str = Field(..., title="Brand", min_length=2, max_length=50, json_schema_extra={"example": "Royal Enfield"})
+    power: float = Field(..., title="Engine Power (cc)", ge=50, le=2500, json_schema_extra={"example": 350})
+    kms_driven: float = Field(..., title="Kilometers Driven", ge=0, le=999999, json_schema_extra={"example": 15000})
+    age: float = Field(..., title="Age (Years)", ge=0, le=50, json_schema_extra={"example": 3})
+    owner_rank: int = Field(..., title="Owner Rank (1, 2, 3+)", ge=1, le=5, json_schema_extra={"example": 1})
 
 class PredictionResponse(BaseModel):
     estimated_price: float
     currency: str = "INR"
-
-@app.on_event("startup")
-def load_artifacts():
-    global bike_model
-    if not DEFAULT_MODEL_PATH.exists():
-        print(f"Warning: Model not found at {DEFAULT_MODEL_PATH}. Prediction endpoints will fail.")
-        return
-    
-    print(f"Loading model from {DEFAULT_MODEL_PATH}...")
-    bike_model = joblib.load(DEFAULT_MODEL_PATH)
-    print("Model loaded successfully.")
 
 @app.get("/")
 @limiter.limit("5/minute")
