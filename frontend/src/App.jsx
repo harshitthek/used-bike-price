@@ -58,7 +58,10 @@ function App() {
     try {
       const res = await fetch('http://127.0.0.1:8000/predict', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_API_KEY || "dev_12345"
+        },
         body: JSON.stringify(formData),
       })
       if (!res.ok) throw new Error('API returned an error')

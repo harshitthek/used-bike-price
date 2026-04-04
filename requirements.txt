@@ -9,3 +9,5 @@ fastapi
 uvicorn
 pydantic
 pytest
+slowapi
+python-dotenv

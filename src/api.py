@@ -4,9 +4,19 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Basic Setup & Variables
+API_KEY = os.getenv("API_KEY", "dev_12345")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -19,10 +29,14 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Enable CORS for frontend
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Enable CORS for frontend securely
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend's origins
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,11 +45,15 @@ app.add_middleware(
 # Global variables for caching the model
 bike_model = None
 
+def verify_api_key(x_api_key: str = Header("None")):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or Missing API Key")
+
 class BikeFeatures(BaseModel):
-    brand: str = Field(..., title="Brand", example="Royal Enfield")
-    power: float = Field(..., title="Engine Power (cc)", example=350)
-    kms_driven: float = Field(..., title="Kilometers Driven", example=15000)
-    age: float = Field(..., title="Age (Years)", example=3)
+    brand: str = Field(..., title="Brand", min_length=2, max_length=50, example="Royal Enfield")
+    power: float = Field(..., title="Engine Power (cc)", ge=50, le=2500, example=350)
+    kms_driven: float = Field(..., title="Kilometers Driven", ge=0, le=999999, example=15000)
+    age: float = Field(..., title="Age (Years)", ge=0, le=50, example=3)
     owner_rank: int = Field(..., title="Owner Rank (1, 2, 3+)", ge=1, le=5, example=1)
 
 class PredictionResponse(BaseModel):
@@ -54,15 +72,18 @@ def load_artifacts():
     print("Model loaded successfully.")
 
 @app.get("/")
-def read_root():
+@limiter.limit("5/minute")
+def read_root(request: Request):
     return {"message": "Welcome to the Used Bike Price Predictor API. Go to /docs for the swagger UI."}
 
 @app.get("/health")
-def health_check():
+@limiter.limit("30/minute")
+def health_check(request: Request):
     return {"status": "ok", "model_loaded": bike_model is not None}
 
-@app.post("/predict", response_model=PredictionResponse)
-def predict_price(features: BikeFeatures):
+@app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
+def predict_price(request: Request, features: BikeFeatures):
     if bike_model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. Try restarting the server or training the model.")
 
