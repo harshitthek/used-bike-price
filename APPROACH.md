@@ -201,5 +201,25 @@ The project outgrew the terminal CLI, so we added a web interface:
 | Hyperparameter tuning | RandomizedSearchCV (10 iter, 3-fold) | Faster than exhaustive GridSearchCV on small gains |
 | Owner encoding | Ordinal (1→5) | Natural ordering: 1st owner > 2nd > 3rd |
 | GPU / Colab | Not needed | scikit-learn is CPU-only, 7K rows trains in seconds |
+| Backend API | FastAPI, Uvicorn, Pydantic | Async, auto-generated docs, Pydantic validation |
 | Frontend framework | React + Vite | Fast HMR, component-based architecture |
-| API framework | FastAPI | Async, auto-generated docs, Pydantic validation |
+| UI/UX framework | Tailwind CSS v4 | Rapid styling, design systems |
+| Animation | Framer Motion | High-fidelity microinteractions |
+
+---
+
+## 10. Phase 6 — Agentic Tooling & Next Steps
+
+To take this from a standard SPA to a "premium, startup-tier" application, we manually injected several specialized AI Model Context Protocol (MCP) servers and skills into the IDE:
+
+1. **21st.dev Magic**: Installed to allow the agent to fetch and build complex `Aceternity` and `MagicUI` animated React components.
+2. **Context7**: Integrated to stream real-time library documentation into the agent's context window.
+3. **shadcn/ui**: Configured to scaffold out standard headless accessibly components.
+4. **Google Stitch**: Brought online to enhance project structure logic.
+5. **UI/UX Pro Max & Anthropic frontend-design**: Local `.agent/` skills downloaded to strictly enforce anti-"AI-slop" aesthetics, ensuring deep color palettes, correct spatial layouts, and premium glassmorphism.
+
+**What Remains (Pending):**
+- Initialize `shadcn` specifically in the `frontend/` directory to configure `components.json`.
+- Execute design generation using the new MCP tools (replace standard components with highly stylized magic components).
+- Add `pytest` automated tests for the Machine Learning data pipeline (`test_preprocessing.py`) and FastAPI.
+- Establish Render / Vercel deployment workflows.

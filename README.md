@@ -137,7 +137,14 @@ docker run --rm -it used-bike-price
 |---|---|
 | ML Framework | scikit-learn, XGBoost |
 | Data | pandas, numpy |
-| Visualization | matplotlib, seaborn |
 | Backend API | FastAPI, Uvicorn, Pydantic |
-| Frontend | React, Vite, Framer Motion, Lucide React |
-| Persistence | joblib |
+| Frontend Core | React, Vite |
+| Frontend UI/UX | Tailwind CSS v4, Framer Motion, Lucide React |
+| Agentic Tools | 21st.dev Magic, UI/UX Pro Max, Anthropic frontend-design, Context7, Stitch |
+
+## Next Steps (V4.1 Roadmap)
+
+1. **shadcn/ui Initialization**: Run `npx shadcn-ui@latest init` within the `frontend` to configure `components.json`.
+2. **Premium Interface Elements**: Use the newly installed 21st.dev Magic and Stitch MCP servers to inject Aceternity/MagicUI components logically replacing standard HTML elements (e.g. animated charts).
+3. **Unit Testing**: Add `pytest` test coverage for the data pipeline (`test_preprocessing.py`) and FastAPI endpoints (`test_api.py`).
+4. **Deployment**: Configure `render.yaml` for backend production deployment and `vercel.json` for frontend web hosting.

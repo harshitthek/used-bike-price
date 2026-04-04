@@ -25,3 +25,10 @@ Thumbs.db
 # Outputs (regenerated)
 outputs/*.png
 outputs/*.json
+
+# Security & Secrets
+.env
+.env.*
+*.env
+.secret
+secrets.json
