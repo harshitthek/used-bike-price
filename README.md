@@ -190,3 +190,12 @@ The platform has been hardened for production deployment:
 Backend configuration is optimized for `Render.com` or `Heroku` using standard Uvicorn/FastAPI paradigms. 
 Frontend configuration is optimized for Vercel. 
 Environment variables (`API_KEY`, `FRONTEND_URL`, `VITE_API_KEY`, `VITE_API_BASE_URL`) should be configured consistently across both hosts.
+
+## CI Automation
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+On every push and pull request to `main`, CI runs:
+
+- backend dependency install + `pytest -q`
+- frontend dependency install + `npm run build`

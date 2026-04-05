@@ -290,3 +290,13 @@ To reduce future frontend/backend drift, we added integration guardrails in test
 - Updated `.gitignore` exceptions to keep env templates tracked while real `.env` files remain ignored.
 
 Current automated checks are now green with `20 passed`.
+
+## 17. Phase 12 — CI Gatekeeping
+To ensure future changes stay stable without relying on manual runs, we added CI automation:
+
+- Added `.github/workflows/ci.yml` with two jobs:
+  - backend checks (`pytest -q` after installing `requirements.txt`)
+  - frontend checks (`npm ci` + `npm run build`)
+- Triggered on both push and pull request events targeting `main`.
+
+This gives a consistent quality gate for regression prevention in both backend and frontend paths.
