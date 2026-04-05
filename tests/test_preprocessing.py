@@ -42,3 +42,30 @@ def test_preprocess_rare_brands():
     assert "Honda" in clean_df["brand"].values
     assert len(clean_df) == 5
 
+
+def test_preprocess_owner_alias_maps_to_rank_5():
+    rows = [
+        {"brand": "Honda", "owner": "Fourth Owner Above", "kms_driven": 12000 + i, "age": 4, "power": 150, "price": 65000}
+        for i in range(3)
+    ] + [
+        {"brand": "Honda", "owner": "Fourth Owner Or More", "kms_driven": 13000 + i, "age": 5, "power": 150, "price": 62000}
+        for i in range(2)
+    ]
+
+    clean_df = preprocess(pd.DataFrame(rows), verbose=False)
+
+    assert len(clean_df) == 5
+    assert set(clean_df["owner_rank"].unique()) == {5}
+
+
+def test_preprocess_unknown_owner_falls_back_to_rank_3():
+    rows = [
+        {"brand": "Honda", "owner": "Unknown Owner Type", "kms_driven": 9000 + i, "age": 3, "power": 125, "price": 50000}
+        for i in range(5)
+    ]
+
+    clean_df = preprocess(pd.DataFrame(rows), verbose=False)
+
+    assert len(clean_df) == 5
+    assert set(clean_df["owner_rank"].unique()) == {3}
+

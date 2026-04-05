@@ -63,7 +63,8 @@ used-bike-price/
 │   ├── preprocessing.py          # Clean, deduplicate, feature engineering
 │   ├── models.py                 # 6 regression models + hyperparameter tuning
 │   ├── evaluation.py             # Metrics & seaborn visualizations
-│   └── api.py                    # FastAPI REST backend
+│   ├── api.py                    # FastAPI REST backend
+│   └── contracts.py              # Shared API/CLI/preprocessing input contract
 ├── frontend/                     # React + Vite web dashboard
 │   ├── src/
 │   │   ├── App.jsx               # Main UI component
@@ -84,9 +85,28 @@ The preprocessing pipeline (`src/preprocessing.py`) performs:
 4. Age filtering (removes entries with unreasonable age >30 years)
 5. IQR outlier removal (3× IQR on price and kms_driven)
 6. Rare brand removal (drops brands with <5 listings)
-7. Owner ordinal encoding (1st=1, 2nd=2, 3rd=3)
+7. Owner ordinal encoding (1st=1, 2nd=2, 3rd=3, 4th=4, 5th+=5)
 
 **Final clean features**: `brand`, `owner`, `kms_driven`, `age`, `power`, `owner_rank` → predicting `price`
+
+## Prediction Contract
+
+Input contract constants are centralized in `src/contracts.py` so preprocessing, API validation, and CLI prediction stay aligned.
+
+- `power`: 50 to 2500
+- `kms_driven`: 0 to 999999
+- `age`: 0 to 50
+- `owner_rank`: 1 to 5
+- expected inference features (in order): `brand`, `owner`, `kms_driven`, `age`, `power`, `owner_rank`
+
+Compatibility note: owner text aliases such as `Fourth Owner Above` and `Fourth Owner Or More` are mapped consistently to `owner_rank=5`.
+
+## API Endpoints
+
+- `GET /` basic welcome message
+- `GET /health` liveness + model load metadata
+- `GET /ready` readiness endpoint (returns 503 if model is not loaded)
+- `POST /predict` authenticated prediction endpoint (`x-api-key` required)
 
 ## Modeling & Tuning
 
@@ -122,6 +142,16 @@ cd frontend
 npm run dev
 ```
 
+Recommended environment variables:
+
+- backend: `API_KEY`, `FRONTEND_URL`
+- frontend: `VITE_API_KEY`, `VITE_API_BASE_URL`
+
+Frontend safety checks now include:
+
+- client-side pre-submit range validation against API contract
+- request timeout handling with user-facing timeout error
+
 Open the localhost URL printed by Vite in your browser.
 
 ## Docker
@@ -148,11 +178,11 @@ docker run --rm -it used-bike-price
 The platform has been hardened for production deployment:
 1. **Rate Limiting**: Integrated `slowapi` to restrict endpoints (e.g., 10 req/minute on inference).
 2. **Authentication**: Injected `X-API-Key` headers via python-dotenv for backend protection.
-3. **Data Integrity**: Pytest covers preprocessing pipeline duplication logic, IQR boundaries, and Pydantic V2 validations (e.g. max engine cc bounds).
+3. **Data Integrity**: Pytest currently includes 16 passing tests, including preprocessing behavior, owner mapping fallbacks, API auth/validation, readiness endpoint checks, prediction boundary checks, internal-error handling, and model-not-loaded handling.
 4. **Cinematic UI**: Replaced standard React components with highly polished responsive `framer-motion` physics and glassmorphic designs built via Agentic tooling.
 
 ## Deployment
 
 Backend configuration is optimized for `Render.com` or `Heroku` using standard Uvicorn/FastAPI paradigms. 
 Frontend configuration is optimized for Vercel. 
-Environment variables (`API_KEY`, `VITE_API_KEY`) must be synchronized across both hosts.
+Environment variables (`API_KEY`, `FRONTEND_URL`, `VITE_API_KEY`, `VITE_API_BASE_URL`) should be configured consistently across both hosts.

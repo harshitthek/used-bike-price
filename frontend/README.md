@@ -1,16 +1,54 @@
-# React + Vite
+# Frontend — Used Bike Price Prediction
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the React + Vite client for the used-bike price predictor.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```powershell
+npm install
+npm run dev
+```
 
-## React Compiler
+## Build
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```powershell
+npm run build
+```
 
-## Expanding the ESLint configuration
+## Environment Variables
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `VITE_API_BASE_URL`: Base URL of the FastAPI backend (default fallback in code: `http://127.0.0.1:8000`)
+- `VITE_API_KEY`: API key sent as `x-api-key`
+
+Example `.env`:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_KEY=dev_12345
+```
+
+## Request Contract
+
+The frontend sends this payload to `POST /predict`:
+
+```json
+{
+	"brand": "Royal Enfield",
+	"power": 350,
+	"kms_driven": 15000,
+	"age": 3,
+	"owner_rank": 1
+}
+```
+
+Current UI bounds are aligned with backend validation:
+
+- `power`: 50 to 2500
+- `age`: 0 to 25 (frontend UX limit; backend allows up to 50)
+- `kms_driven`: 0 to 150000 (frontend UX limit; backend allows up to 999999)
+- `owner_rank`: 1 to 5
+
+## UX Safety Behavior
+
+- Client-side pre-submit validation checks payload ranges before request.
+- Prediction requests use a timeout and show a dedicated timeout error message when exceeded.

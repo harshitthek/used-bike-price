@@ -73,6 +73,7 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 - `POST /predict` endpoint with Pydantic schema validation
 - `GET /health` endpoint for status checks
 - Error handling for missing model and invalid inputs
+- Shared contract bounds and owner mapping consumed from `src/contracts.py`
 
 ### Frontend (`frontend/`)
 - React app scaffolded with Vite
@@ -108,7 +109,51 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 **What we did**:
 - **shadcn/ui Configuration**: Scaffolded the library layer inside Vite and optimized the Tailwind execution hierarchy so compiled code doesn't override browser native `@import`s.
 - **Agentic Motion Physics**: Injected heavy premium Aceternity components visually overhauling the price result into a highly animated `GlassCard` combined with a physics-based `NumberTicker`.
-- **System Testing**: Orchestrated and safely passed Pytests (100% execution) without generating IDE or Terminal standard library deprecation warnings.
+- **System Testing**: Orchestrated and safely passed Pytests without runtime regressions.
+
+---
+
+## Phase 10 — Contract Consistency & Integration Alignment ✅
+
+**What we did**:
+- Added `src/contracts.py` as a single source of truth for:
+  - input bounds (`power`, `kms_driven`, `age`, `owner_rank`)
+  - owner label/rank conversions
+  - ordered inference feature list
+- Updated `src/preprocessing.py` to map owner labels with shared constants.
+- Updated `src/api.py` to:
+  - apply shared bounds in Pydantic model definitions
+  - map owner rank with shared mapping
+  - enforce deterministic DataFrame feature ordering before inference
+- Updated `src/main.py` interactive mode to support owner rank 1-5 using shared mapping.
+- Updated frontend (`frontend/src/App.jsx`) to:
+  - read API host from `VITE_API_BASE_URL`
+  - support owner rank option 5
+  - align power slider max with backend (2500)
+  - show clearer API failure messages by HTTP status.
+- Expanded tests:
+  - API success path (`/predict` returns valid response)
+  - API 503 path when model is missing
+  - owner alias mapping test for preprocessing (`Fourth Owner Above` / `Fourth Owner Or More` → rank 5)
+
+**Current test status**: `9 passed`
+
+---
+
+## Phase 11 — Runtime Readiness & Request Resilience ✅
+
+**What we did**:
+- Updated `src/api.py` with stronger operational behavior:
+  - model load errors are tracked and exposed through health metadata
+  - new `GET /ready` endpoint returns `503` until model is ready
+  - prediction exceptions are logged and returned as stable `500` responses
+- Updated frontend request pipeline in `frontend/src/App.jsx`:
+  - added pre-submit contract validation
+  - added fetch timeout handling (`AbortController`)
+  - improved timeout and API error messages for users
+- Added readiness endpoint tests in `tests/test_api.py`.
+
+**Current test status**: `16 passed`
 
 ---
 

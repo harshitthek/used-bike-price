@@ -14,8 +14,31 @@ const OWNER_OPTIONS = [
   { value: 1, label: '1st Owner', tag: 'Best value' },
   { value: 2, label: '2nd Owner', tag: null },
   { value: 3, label: '3rd Owner', tag: null },
-  { value: 4, label: '4th+', tag: 'High depreciation' },
+  { value: 4, label: '4th Owner', tag: null },
+  { value: 5, label: '5th+', tag: 'High depreciation' },
 ]
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
+const REQUEST_TIMEOUT_MS = 10000
+
+function validateFormData(data) {
+  if (typeof data.brand !== 'string' || data.brand.trim().length < 2) {
+    return 'Brand must contain at least 2 characters.'
+  }
+  if (data.power < 50 || data.power > 2500) {
+    return 'Engine power must be between 50 and 2500 cc.'
+  }
+  if (data.kms_driven < 0 || data.kms_driven > 999999) {
+    return 'Odometer must be between 0 and 999999 km.'
+  }
+  if (data.age < 0 || data.age > 50) {
+    return 'Age must be between 0 and 50 years.'
+  }
+  if (data.owner_rank < 1 || data.owner_rank > 5) {
+    return 'Owner rank must be between 1 and 5.'
+  }
+  return null
+}
 
 function App() {
   const [formData, setFormData] = useState({
@@ -57,17 +80,35 @@ function App() {
     setResult(null)
     setError(null)
 
+    const validationError = validateFormData(formData)
+    if (validationError) {
+      setError(validationError)
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
     try {
-      const res = await fetch('http://127.0.0.1:8000/predict', {
+      const res = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'x-api-key': import.meta.env.VITE_API_KEY || "dev_12345"
         },
+        signal: controller.signal,
         body: JSON.stringify(formData),
       })
-      if (!res.ok) throw new Error('API returned an error')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        let message = data?.detail || 'Prediction request failed.'
+        if (res.status === 401) message = 'Authentication failed. Check your API key.'
+        if (res.status === 422) message = 'Some input values are outside allowed limits.'
+        if (res.status === 429) message = 'Too many requests. Please wait and try again.'
+        if (res.status >= 500) message = 'Server error while generating prediction.'
+        throw new Error(message)
+      }
 
       setTimeout(() => {
         setResult(data.estimated_price)
@@ -75,9 +116,15 @@ function App() {
       }, 1200)
     } catch (err) {
       setTimeout(() => {
-        setError('Could not connect to the prediction API.')
+        if (err?.name === 'AbortError') {
+          setError('Prediction request timed out. Please try again.')
+        } else {
+          setError(err?.message || 'Could not connect to the prediction API.')
+        }
         setLoading(false)
       }, 500)
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 
@@ -173,7 +220,7 @@ function App() {
                   label="Engine Power"
                   unit="cc"
                   value={formData.power}
-                  min={50} max={1500} step={25}
+                  min={50} max={2500} step={25}
                   onChange={(v) => handleChange('power', v)}
                 />
                 <SliderField

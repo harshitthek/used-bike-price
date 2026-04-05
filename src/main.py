@@ -28,6 +28,7 @@ from src.preprocessing import (
     TARGET,
 )
 from src.models import train_and_compare, get_best_model, tune_best_model
+from src.contracts import OWNER_RANK_TO_LABEL, OWNER_RANK_MAX, OWNER_RANK_MIN
 from src.evaluation import (
     evaluate_on_test,
     plot_model_comparison,
@@ -170,10 +171,8 @@ def run_predict():
             power = float(input("  Engine power (cc): ").strip())
             kms = float(input("  Kilometers driven: ").strip())
             age = float(input("  Age (years): ").strip())
-            owner_num = int(input("  Owner number (1/2/3): ").strip())
-
-            owner_map = {1: "First Owner", 2: "Second Owner", 3: "Third Owner"}
-            owner = owner_map.get(owner_num, "First Owner")
+            owner_num = int(input(f"  Owner number ({OWNER_RANK_MIN}-{OWNER_RANK_MAX}): ").strip())
+            owner = OWNER_RANK_TO_LABEL.get(owner_num, "First Owner")
 
             sample = pd.DataFrame([{
                 "brand": brand,

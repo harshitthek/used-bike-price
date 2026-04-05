@@ -6,6 +6,8 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 
+from src.contracts import OWNER_LABEL_TO_RANK
+
 
 # ── Feature lists (after preprocessing) ────────────────────────
 CATEGORICAL_FEATURES: List[str] = ["brand", "owner"]
@@ -93,14 +95,7 @@ def preprocess(df: pd.DataFrame, *, verbose: bool = True) -> pd.DataFrame:
 
     # ── 9. Owner ordinal encoding ──────────────────────────────
     if "owner" in df.columns:
-        owner_map = {
-            "First Owner": 1,
-            "Second Owner": 2,
-            "Third Owner": 3,
-            "Fourth Owner": 4,
-            "Fourth Owner Above": 5,
-        }
-        df["owner_rank"] = df["owner"].map(owner_map).fillna(3).astype(int)
+        df["owner_rank"] = df["owner"].map(OWNER_LABEL_TO_RANK).fillna(3).astype(int)
 
     # ── 10. Select final columns ───────────────────────────────
     keep = [c for c in (CATEGORICAL_FEATURES + NUMERIC_FEATURES + ["owner_rank", TARGET])

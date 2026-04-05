@@ -1,5 +1,6 @@
 """FastAPI backend for Used Bike Price Prediction."""
 import os
+import logging
 from pathlib import Path
 
 import joblib
@@ -13,7 +14,21 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 
+from src.contracts import (
+    AGE_MAX,
+    AGE_MIN,
+    KMS_MAX,
+    KMS_MIN,
+    OWNER_RANK_MAX,
+    OWNER_RANK_MIN,
+    OWNER_RANK_TO_LABEL,
+    POWER_MAX,
+    POWER_MIN,
+    PREDICTION_FEATURES,
+)
+
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Basic Setup & Variables
 API_KEY = os.getenv("API_KEY", "dev_12345")
@@ -24,15 +39,28 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 DEFAULT_MODEL_PATH = MODELS_DIR / "best_model.joblib"
 
+# Global variables for caching model state
+bike_model = None
+model_load_error = None
+
 def load_artifacts():
-    global bike_model
+    global bike_model, model_load_error
+    model_load_error = None
+
     if not DEFAULT_MODEL_PATH.exists():
-        print(f"Warning: Model not found at {DEFAULT_MODEL_PATH}. Prediction endpoints will fail.")
+        bike_model = None
+        model_load_error = f"Model not found at {DEFAULT_MODEL_PATH}"
+        logger.warning(model_load_error)
         return
-    
-    print(f"Loading model from {DEFAULT_MODEL_PATH}...")
-    bike_model = joblib.load(DEFAULT_MODEL_PATH)
-    print("Model loaded successfully.")
+
+    try:
+        logger.info("Loading model from %s", DEFAULT_MODEL_PATH)
+        bike_model = joblib.load(DEFAULT_MODEL_PATH)
+        logger.info("Model loaded successfully.")
+    except Exception as exc:
+        bike_model = None
+        model_load_error = f"Failed to load model artifact: {exc}"
+        logger.exception("Model load failed")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,19 +87,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global variables for caching the model
-bike_model = None
-
 def verify_api_key(x_api_key: str = Header("None")):
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or Missing API Key")
 
 class BikeFeatures(BaseModel):
     brand: str = Field(..., title="Brand", min_length=2, max_length=50, json_schema_extra={"example": "Royal Enfield"})
-    power: float = Field(..., title="Engine Power (cc)", ge=50, le=2500, json_schema_extra={"example": 350})
-    kms_driven: float = Field(..., title="Kilometers Driven", ge=0, le=999999, json_schema_extra={"example": 15000})
-    age: float = Field(..., title="Age (Years)", ge=0, le=50, json_schema_extra={"example": 3})
-    owner_rank: int = Field(..., title="Owner Rank (1, 2, 3+)", ge=1, le=5, json_schema_extra={"example": 1})
+    power: float = Field(..., title="Engine Power (cc)", ge=POWER_MIN, le=POWER_MAX, json_schema_extra={"example": 350})
+    kms_driven: float = Field(..., title="Kilometers Driven", ge=KMS_MIN, le=KMS_MAX, json_schema_extra={"example": 15000})
+    age: float = Field(..., title="Age (Years)", ge=AGE_MIN, le=AGE_MAX, json_schema_extra={"example": 3})
+    owner_rank: int = Field(..., title="Owner Rank (1-5)", ge=OWNER_RANK_MIN, le=OWNER_RANK_MAX, json_schema_extra={"example": 1})
 
 class PredictionResponse(BaseModel):
     estimated_price: float
@@ -85,7 +110,24 @@ def read_root(request: Request):
 @app.get("/health")
 @limiter.limit("30/minute")
 def health_check(request: Request):
-    return {"status": "ok", "model_loaded": bike_model is not None}
+    return {
+        "status": "ok",
+        "ready": bike_model is not None,
+        "model_loaded": bike_model is not None,
+        "model_path": str(DEFAULT_MODEL_PATH),
+        "model_load_error": model_load_error,
+    }
+
+
+@app.get("/ready")
+@limiter.limit("30/minute")
+def readiness_check(request: Request):
+    if bike_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail=model_load_error or "Model is not ready.",
+        )
+    return {"ready": True}
 
 @app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
@@ -93,12 +135,8 @@ def predict_price(request: Request, features: BikeFeatures):
     if bike_model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. Try restarting the server or training the model.")
 
-    # Convert numeric rank back to string for the pipeline (if it uses the raw 'owner' field)
-    # The pipeline uses owner_rank natively for numeric scaling, but let's pass a synthetic 'owner' string just in case
-    owner_map = {1: "First Owner", 2: "Second Owner", 3: "Third Owner", 4: "Fourth Owner", 5: "Fourth Owner Or More"}
-    owner_str = owner_map.get(features.owner_rank, "First Owner")
+    owner_str = OWNER_RANK_TO_LABEL.get(features.owner_rank, "First Owner")
 
-    # Create a DataFrame for prediction
     input_df = pd.DataFrame([{
         "brand": features.brand,
         "owner": owner_str,
@@ -106,15 +144,16 @@ def predict_price(request: Request, features: BikeFeatures):
         "age": features.age,
         "power": features.power,
         "owner_rank": features.owner_rank,
-    }])
+    }])[list(PREDICTION_FEATURES)]
 
     try:
         prediction = bike_model.predict(input_df)[0]
         # Ensure prediction is positive
         price = max(1000.0, float(prediction))
         return PredictionResponse(estimated_price=round(price, 0))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error generating prediction: {str(e)}")
+    except Exception:
+        logger.exception("Prediction failed")
+        raise HTTPException(status_code=500, detail="Prediction failed due to internal model error.")
 
 # To run:
 # uvicorn src.api:app --reload

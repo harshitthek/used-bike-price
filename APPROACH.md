@@ -73,7 +73,7 @@ Raw CSV (32,648 rows)
   ↓ Remove age > 30 years (found a bike listed as 63 years old)
   ↓ IQR outlier removal on price & kms_driven (3× IQR, conservative)
   ↓ Remove rare brands with < 5 samples
-  ↓ Encode owner as ordinal (1st=1, 2nd=2, 3rd=3)
+  ↓ Encode owner as ordinal (1st=1, 2nd=2, 3rd=3, 4th=4, 5th+=5)
   = 7,007 clean rows, 6 features
 ```
 
@@ -105,7 +105,7 @@ After preprocessing, our feature set:
 | `power` (cc) | Numeric | Engine capacity | **+0.748** (strongest) |
 | `age` (years) | Numeric | How old the bike is | **-0.491** |
 | `kms_driven` | Numeric | Odometer reading | **-0.434** |
-| `owner_rank` | Ordinal | 1st/2nd/3rd owner | Negative (lower for later owners) |
+| `owner_rank` | Ordinal | 1st..5th+ owner rank | Negative (lower for later owners) |
 | `brand` | Categorical | Manufacturer | Premium brands → higher price |
 | `owner` | Categorical | Raw ownership text | Encoded as `owner_rank` |
 
@@ -228,4 +228,52 @@ To transition the sandbox model into a production SaaS application, we fortified
 We executed a complete visual overhaul and testing closure:
 - Initialized `shadcn/ui` over Vite and resolved compilation blockages related to Tailwind v4 execution order.
 - Deployed high-end customized Aceternity-style elements utilizing `framer-motion`: A deep-blur `GlassCard` and an automated `<NumberTicker />` that physics-counts to the evaluation price.
-- Engineered precise testing environments via `pytest` to assert IQR math and Header validation across the pipeline, passing completely with 0 warnings.
+- Engineered precise testing environments via `pytest` to assert IQR math and header validation across the pipeline.
+
+## 13. Phase 9 — Contract Consistency Hardening
+After the first full implementation pass, we added a dedicated contract hardening layer to prevent frontend/backend drift:
+
+- Introduced `src/contracts.py` as a single source of truth for:
+  - Numeric bounds (`power`, `kms_driven`, `age`)
+  - Owner rank bounds (1-5)
+  - Owner rank/text mappings
+  - Required inference feature order
+- Updated `src/api.py` to consume shared bounds and owner mapping, and to construct prediction DataFrames using explicit feature ordering.
+- Updated `src/preprocessing.py` to use the same owner-label mapping used by the API.
+- Updated interactive CLI prediction in `src/main.py` to support rank 1-5 and shared mapping.
+- Updated frontend (`frontend/src/App.jsx`) to:
+  - Use `VITE_API_BASE_URL` instead of a fixed endpoint
+  - Extend owner selector to rank 5
+  - Align power slider max to backend contract (2500)
+  - Surface better API error messages by status code.
+
+## 14. Current Test Status
+Current automated checks are green with `9 passed` and include:
+
+- Preprocessing rules (dedupe, age outliers, rare brands)
+- Owner alias mapping to rank 5
+- API auth/validation behavior
+- Successful prediction response path
+- Model-not-loaded failure path
+
+## 15. Phase 10 — Runtime Readiness and UX Resilience
+We then moved to operational hardening for production-like behavior:
+
+- Added explicit readiness endpoint (`GET /ready`) in `src/api.py`, returning 503 when model artifacts are unavailable.
+- Extended `GET /health` response with readiness metadata (`model_path`, `model_load_error`) for faster diagnostics.
+- Strengthened prediction failure handling in `src/api.py` by logging internal exceptions and returning a stable 500 response message.
+- Updated frontend `frontend/src/App.jsx` to include:
+  - request timeout via `AbortController`
+  - pre-submit validation against backend contract bounds
+  - clearer error messaging for timeout and API failures.
+- Added new API tests for readiness endpoint success/failure paths.
+
+Current automated checks are now green with `16 passed`.
+
+Newly covered test cases include:
+
+- readiness metadata presence in `/health`
+- accepted minimum input boundaries for prediction payloads
+- enforced minimum output price floor
+- internal model exception path returning stable 500 errors
+- unknown owner label fallback to rank 3 during preprocessing
