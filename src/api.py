@@ -2,6 +2,7 @@
 import os
 import logging
 import json
+from typing import Any, cast
 from pathlib import Path
 
 import joblib
@@ -107,7 +108,7 @@ app = FastAPI(
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
 
 # Enable CORS for frontend securely
 app.add_middleware(

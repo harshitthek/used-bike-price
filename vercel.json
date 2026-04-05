@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "if [ -f package-lock.json ]; then npm ci; else cd frontend && npm ci; fi",
-  "buildCommand": "if [ -f vite.config.js ]; then npm run build; else cd frontend && npm run build && cd .. && rm -rf dist && cp -r frontend/dist dist; fi",
-  "outputDirectory": "dist",
+  "installCommand": "npm --prefix frontend ci",
+  "buildCommand": "npm --prefix frontend run build",
+  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/(.*)",
