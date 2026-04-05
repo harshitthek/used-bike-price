@@ -192,6 +192,20 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 
 ---
 
+## Phase 14 — Full UI Bounds Alignment ✅
+
+**What we did**:
+- Updated frontend sliders in `frontend/src/App.jsx` to fully match backend contract ranges:
+  - `age` slider max changed from 25 to 50
+  - `kms_driven` slider max changed from 150000 to 999999
+- Expanded `tests/test_frontend_contract.py` with slider-bound assertions for:
+  - age slider contract alignment
+  - odometer slider contract alignment
+
+**Current test status**: `22 passed`
+
+---
+
 ## Final Test-Set Results
 
 | Model | R² | MAE (₹) | RMSE (₹) | MAPE |

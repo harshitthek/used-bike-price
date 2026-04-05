@@ -228,7 +228,7 @@ function App() {
                   label="Vehicle Age"
                   unit={formData.age === 1 ? 'year' : 'years'}
                   value={formData.age}
-                  min={0} max={25} step={1}
+                  min={0} max={50} step={1}
                   onChange={(v) => handleChange('age', v)}
                 />
                 <SliderField
@@ -236,7 +236,7 @@ function App() {
                   label="Odometer"
                   unit="km"
                   value={formData.kms_driven}
-                  min={0} max={150000} step={1000}
+                  min={0} max={999999} step={1000}
                   onChange={(v) => handleChange('kms_driven', v)}
                   formatValue={(v) => v.toLocaleString('en-IN')}
                 />

@@ -291,6 +291,16 @@ To reduce future frontend/backend drift, we added integration guardrails in test
 
 Current automated checks are now green with `20 passed`.
 
+## 18. Phase 13 — Full Frontend Range Alignment
+To eliminate remaining UI/backend range drift, we aligned all user input sliders with backend contract limits:
+
+- `Vehicle Age` slider now supports 0..50
+- `Odometer` slider now supports 0..999999
+
+We also added explicit slider-bound assertions in `tests/test_frontend_contract.py` for both fields.
+
+Current automated checks are now green with `22 passed`.
+
 ## 17. Phase 12 — CI Gatekeeping
 To ensure future changes stay stable without relying on manual runs, we added CI automation:
 

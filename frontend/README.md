@@ -50,8 +50,8 @@ The frontend sends this payload to `POST /predict`:
 Current UI bounds are aligned with backend validation:
 
 - `power`: 50 to 2500
-- `age`: 0 to 25 (frontend UX limit; backend allows up to 50)
-- `kms_driven`: 0 to 150000 (frontend UX limit; backend allows up to 999999)
+- `age`: 0 to 50
+- `kms_driven`: 0 to 999999
 - `owner_rank`: 1 to 5
 
 ## UX Safety Behavior

@@ -182,7 +182,7 @@ docker run --rm -it used-bike-price
 The platform has been hardened for production deployment:
 1. **Rate Limiting**: Integrated `slowapi` to restrict endpoints (e.g., 10 req/minute on inference).
 2. **Authentication**: Injected `X-API-Key` headers via python-dotenv for backend protection.
-3. **Data Integrity**: Pytest currently includes 20 passing tests, including preprocessing behavior, owner mapping fallbacks, API auth/validation, readiness endpoint checks, prediction boundary checks, internal-error handling, model-not-loaded handling, and frontend/backend contract-alignment checks.
+3. **Data Integrity**: Pytest currently includes 22 passing tests, including preprocessing behavior, owner mapping fallbacks, API auth/validation, readiness endpoint checks, prediction boundary checks, internal-error handling, model-not-loaded handling, and frontend/backend contract-alignment checks.
 4. **Cinematic UI**: Replaced standard React components with highly polished responsive `framer-motion` physics and glassmorphic designs built via Agentic tooling.
 
 ## Deployment

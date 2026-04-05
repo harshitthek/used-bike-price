@@ -67,3 +67,29 @@ def test_frontend_engine_slider_matches_power_contract_bounds():
     min_val, max_val = int(slider_match.group(1)), int(slider_match.group(2))
     assert min_val == int(POWER_MIN)
     assert max_val == int(POWER_MAX)
+
+
+def test_frontend_age_slider_matches_contract_bounds():
+    src = _read_app()
+    slider_match = re.search(
+        r'label="Vehicle Age"[\s\S]*?min={(\d+)}\s*max={(\d+)}',
+        src,
+    )
+    assert slider_match, "Vehicle Age slider bounds not found"
+
+    min_val, max_val = int(slider_match.group(1)), int(slider_match.group(2))
+    assert min_val == int(AGE_MIN)
+    assert max_val == int(AGE_MAX)
+
+
+def test_frontend_odometer_slider_matches_contract_bounds():
+    src = _read_app()
+    slider_match = re.search(
+        r'label="Odometer"[\s\S]*?min={(\d+)}\s*max={(\d+)}',
+        src,
+    )
+    assert slider_match, "Odometer slider bounds not found"
+
+    min_val, max_val = int(slider_match.group(1)), int(slider_match.group(2))
+    assert min_val == int(KMS_MIN)
+    assert max_val == int(KMS_MAX)
