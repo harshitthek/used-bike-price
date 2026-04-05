@@ -245,9 +245,10 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 
 | Model | R² | MAE (₹) | RMSE (₹) | MAPE |
 |---|---|---|---|---|
-| **XGBoost (tuned)** | **0.9109** | **₹10,213** | **₹14,943** | **18.3%** |
-| GradientBoosting | 0.9063 | ₹10,129 | ₹15,326 | 18.0% |
-| RandomForest | 0.8875 | ₹10,563 | ₹16,795 | 18.2% |
-| LinearRegression | 0.7960 | ₹15,422 | ₹22,613 | 30.6% |
-| Ridge | 0.7960 | ₹15,417 | ₹22,612 | 30.6% |
-| Lasso | 0.7960 | ₹15,419 | ₹22,611 | 30.6% |
+| **BlendEnsemble (XGBoost + GradientBoosting)** | **0.9110** | **₹10,110** | **₹14,934** | **18.05%** |
+| GradientBoosting | 0.9060 | ₹10,134 | ₹15,350 | 17.99% |
+| XGBoost | 0.9057 | ₹10,204 | ₹15,373 | 17.96% |
+| RandomForest | 0.8875 | ₹10,563 | ₹16,795 | 18.19% |
+| LinearRegression | 0.8501 | ₹12,861 | ₹19,385 | 23.14% |
+| Lasso | 0.8501 | ₹12,858 | ₹19,383 | 23.13% |
+| Ridge | 0.8500 | ₹12,868 | ₹19,391 | 23.15% |

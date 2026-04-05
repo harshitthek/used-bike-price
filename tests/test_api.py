@@ -22,7 +22,7 @@ client = TestClient(app)
 class DummyModel:
     def predict(self, df):
         assert list(df.columns) == list(PREDICTION_FEATURES)
-        assert df.loc[0, "owner"] == "Fourth Owner Above"
+        assert df.loc[0, "owner"] == "Fourth Owner Or More"
         return [78654.0]
 
 

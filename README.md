@@ -104,7 +104,7 @@ Input contract constants are centralized in `src/contracts.py` so preprocessing,
 - `owner_rank`: 1 to 5
 - expected inference features (in order): `brand`, `owner`, `kms_driven`, `age`, `power`, `owner_rank`
 
-Compatibility note: owner text aliases such as `Fourth Owner Above` and `Fourth Owner Or More` are mapped consistently to `owner_rank=5`.
+Compatibility note: owner text aliases such as `Fourth Owner Above` and `Fourth Owner Or More` are mapped consistently to `owner_rank=5`; the canonical inference label for rank `5` is `Fourth Owner Or More`.
 
 ## API Endpoints
 

@@ -23,7 +23,7 @@ OWNER_RANK_TO_LABEL: Dict[int, str] = {
     2: "Second Owner",
     3: "Third Owner",
     4: "Fourth Owner",
-    5: "Fourth Owner Above",
+    5: "Fourth Owner Or More",
 }
 
 # Include a compatibility alias used in older API code.
