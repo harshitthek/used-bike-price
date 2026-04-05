@@ -171,7 +171,7 @@ function App() {
           <h2 className="text-5xl md:text-6xl font-black tracking-tight mb-4">
             Know Your Bike's
             <br />
-            <span className="bg-gradient-to-r from-[var(--color-accent)] via-purple-400 to-pink-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
               True Worth
             </span>
           </h2>

@@ -53,7 +53,7 @@ select {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, #6366f1, #ec4899, #6366f1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.5));
   background-size: 300% 300%;
   animation: gradient-shift 6s ease infinite;
   z-index: -1;
@@ -131,7 +131,7 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 .orb-2 {
   width: 500px; height: 500px;
-  background: #ec4899;
+  background: #94a3b8;
   bottom: -200px; right: -100px;
   animation: orb-drift 20s ease-in-out infinite alternate-reverse;
 }
