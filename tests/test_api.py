@@ -6,6 +6,7 @@ from src.contracts import (
     AGE_MIN,
     KMS_MAX,
     KMS_MIN,
+    OWNER_RANK_TO_LABEL,
     OWNER_RANK_MAX,
     OWNER_RANK_MIN,
     POWER_MAX,
@@ -54,7 +55,25 @@ def test_health_includes_readiness_metadata(monkeypatch):
     assert response.status_code == 200
     assert "ready" in payload
     assert "model_path" in payload
+    assert "model_metadata" in payload
     assert payload["model_load_error"] == "Model missing"
+
+
+def test_contract_endpoint_exposes_expected_bounds():
+    response = client.get("/contract")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["features"] == list(PREDICTION_FEATURES)
+    assert payload["bounds"]["power"]["min"] == POWER_MIN
+    assert payload["bounds"]["power"]["max"] == POWER_MAX
+    assert payload["bounds"]["kms_driven"]["min"] == KMS_MIN
+    assert payload["bounds"]["kms_driven"]["max"] == KMS_MAX
+    assert payload["bounds"]["age"]["min"] == AGE_MIN
+    assert payload["bounds"]["age"]["max"] == AGE_MAX
+    assert payload["bounds"]["owner_rank"]["min"] == OWNER_RANK_MIN
+    assert payload["bounds"]["owner_rank"]["max"] == OWNER_RANK_MAX
+    assert payload["owner_rank_labels"] == {str(k): v for k, v in OWNER_RANK_TO_LABEL.items()}
 
 
 def test_readiness_reports_not_ready(monkeypatch):

@@ -1,6 +1,7 @@
 """FastAPI backend for Used Bike Price Prediction."""
 import os
 import logging
+import json
 from pathlib import Path
 
 import joblib
@@ -38,14 +39,42 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 DEFAULT_MODEL_PATH = MODELS_DIR / "best_model.joblib"
+OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+EVALUATION_RESULTS_PATH = OUTPUTS_DIR / "evaluation_results.json"
 
 # Global variables for caching model state
 bike_model = None
 model_load_error = None
+model_metadata = None
+
+
+def _load_model_metadata() -> dict | None:
+    if not EVALUATION_RESULTS_PATH.exists():
+        return None
+
+    try:
+        with open(EVALUATION_RESULTS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        best_model = data.get("best_model")
+        test_results = data.get("test_results") or []
+        best_metrics = None
+        if best_model:
+            best_metrics = next((r for r in test_results if r.get("model") == best_model), None)
+
+        return {
+            "best_model": best_model,
+            "best_metrics": best_metrics,
+            "source": str(EVALUATION_RESULTS_PATH),
+        }
+    except Exception:
+        logger.exception("Failed to parse evaluation results metadata")
+        return None
 
 def load_artifacts():
-    global bike_model, model_load_error
+    global bike_model, model_load_error, model_metadata
     model_load_error = None
+    model_metadata = None
 
     if not DEFAULT_MODEL_PATH.exists():
         bike_model = None
@@ -56,6 +85,7 @@ def load_artifacts():
     try:
         logger.info("Loading model from %s", DEFAULT_MODEL_PATH)
         bike_model = joblib.load(DEFAULT_MODEL_PATH)
+        model_metadata = _load_model_metadata()
         logger.info("Model loaded successfully.")
     except Exception as exc:
         bike_model = None
@@ -116,6 +146,7 @@ def health_check(request: Request):
         "model_loaded": bike_model is not None,
         "model_path": str(DEFAULT_MODEL_PATH),
         "model_load_error": model_load_error,
+        "model_metadata": model_metadata,
     }
 
 
@@ -128,6 +159,21 @@ def readiness_check(request: Request):
             detail=model_load_error or "Model is not ready.",
         )
     return {"ready": True}
+
+
+@app.get("/contract")
+@limiter.limit("30/minute")
+def contract_check(request: Request):
+    return {
+        "features": list(PREDICTION_FEATURES),
+        "bounds": {
+            "power": {"min": POWER_MIN, "max": POWER_MAX},
+            "kms_driven": {"min": KMS_MIN, "max": KMS_MAX},
+            "age": {"min": AGE_MIN, "max": AGE_MAX},
+            "owner_rank": {"min": OWNER_RANK_MIN, "max": OWNER_RANK_MAX},
+        },
+        "owner_rank_labels": OWNER_RANK_TO_LABEL,
+    }
 
 @app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")

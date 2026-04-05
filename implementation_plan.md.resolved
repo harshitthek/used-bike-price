@@ -206,6 +206,20 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 
 ---
 
+## Phase 15 — API Contract Discovery & Metadata Visibility ✅
+
+**What we did**:
+- Added `GET /contract` endpoint in `src/api.py` to publish canonical inference schema details:
+  - ordered inference features
+  - numeric bounds
+  - owner-rank labels
+- Extended `GET /health` response with optional `model_metadata` loaded from `outputs/evaluation_results.json` when available.
+- Added tests for the `/contract` endpoint and health metadata field presence.
+
+**Current test status**: `23 passed`
+
+---
+
 ## Final Test-Set Results
 
 | Model | R² | MAE (₹) | RMSE (₹) | MAPE |

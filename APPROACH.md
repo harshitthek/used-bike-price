@@ -301,6 +301,17 @@ We also added explicit slider-bound assertions in `tests/test_frontend_contract.
 
 Current automated checks are now green with `22 passed`.
 
+## 19. Phase 14 — API Contract Discovery and Model Metadata
+To improve integration clarity and operational debugging, we extended API introspection:
+
+- Added a new `GET /contract` endpoint that publishes:
+  - canonical feature ordering
+  - accepted bounds
+  - owner-rank labels
+- Extended `GET /health` to include optional model metadata derived from `outputs/evaluation_results.json`.
+
+Current automated checks are now green with `23 passed`.
+
 ## 17. Phase 12 — CI Gatekeeping
 To ensure future changes stay stable without relying on manual runs, we added CI automation:
 
