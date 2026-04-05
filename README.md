@@ -6,13 +6,13 @@ Predict the resale value of used motorcycles in India using machine learning. Tr
 
 | Model | R² (Test) | MAE (₹) | RMSE (₹) | MAPE |
 |---|---|---|---|---|
-| **BlendEnsemble (XGBoost + GradientBoosting)** | **0.9110** | **₹10,110** | **₹14,934** | **18.0%** |
-| GradientBoosting | 0.9060 | ₹10,134 | ₹15,350 | 18.0% |
-| XGBoost | 0.9057 | ₹10,204 | ₹15,373 | 18.0% |
-| RandomForest | 0.8875 | ₹10,563 | ₹16,795 | 18.2% |
-| LinearRegression | 0.8501 | ₹12,861 | ₹19,385 | 23.1% |
-| Lasso | 0.8501 | ₹12,858 | ₹19,383 | 23.1% |
-| Ridge | 0.8500 | ₹12,868 | ₹19,391 | 23.2% |
+| **BlendEnsemble (XGBoost + GradientBoosting)** | **0.9110** | **₹10,110** | **₹14,934** | **18.05%** |
+| GradientBoosting | 0.9060 | ₹10,134 | ₹15,350 | 17.99% |
+| XGBoost | 0.9057 | ₹10,204 | ₹15,373 | 17.96% |
+| RandomForest | 0.8875 | ₹10,563 | ₹16,795 | 18.19% |
+| LinearRegression | 0.8501 | ₹12,861 | ₹19,385 | 23.14% |
+| Lasso | 0.8501 | ₹12,858 | ₹19,383 | 23.13% |
+| Ridge | 0.8500 | ₹12,868 | ₹19,391 | 23.15% |
 
 The best model (BlendEnsemble) explains about **91.1%** of the variance in motorcycle prices. On average, predictions are off by about ₹10,100.
 
@@ -120,7 +120,7 @@ The project trains seven regression models in parallel (Linear, Ridge, Lasso, Ra
 
 The pipeline also applies derived numeric features for linear-family models (`kms_per_year`, `power_per_year`, `log_kms_driven`, `age_squared`) to improve linear baseline quality without destabilizing tree-model performance.
 
-The best model (selected by 5-fold cross-validation R²) is then fine-tuned using `RandomizedSearchCV` over a hyperparameter grid (learning rate, max depth, n_estimators, min samples/child weight). The tuned model is persisted to `models/best_model.joblib`.
+The best model is selected by cross-validation R² and then persisted to `models/best_model.joblib`. Hyperparameter tuning via `RandomizedSearchCV` is applied to supported tree models (XGBoost / GradientBoosting / RandomForest), while the weighted `BlendEnsemble` is trained from fixed constituent estimators.
 
 ## Usage
 
