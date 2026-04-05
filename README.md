@@ -44,6 +44,10 @@ The best model (XGBoost) explains **91%** of the variance in motorcycle prices. 
 
 4. Ensure `data/Used_Bikes.csv` exists. If not, download from [Kaggle](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho).
 
+5. Create local env files from templates:
+   - copy `.env.example` to `.env`
+   - copy `frontend/.env.example` to `frontend/.env`
+
 ## Project Structure
 
 ```
@@ -178,7 +182,7 @@ docker run --rm -it used-bike-price
 The platform has been hardened for production deployment:
 1. **Rate Limiting**: Integrated `slowapi` to restrict endpoints (e.g., 10 req/minute on inference).
 2. **Authentication**: Injected `X-API-Key` headers via python-dotenv for backend protection.
-3. **Data Integrity**: Pytest currently includes 16 passing tests, including preprocessing behavior, owner mapping fallbacks, API auth/validation, readiness endpoint checks, prediction boundary checks, internal-error handling, and model-not-loaded handling.
+3. **Data Integrity**: Pytest currently includes 20 passing tests, including preprocessing behavior, owner mapping fallbacks, API auth/validation, readiness endpoint checks, prediction boundary checks, internal-error handling, model-not-loaded handling, and frontend/backend contract-alignment checks.
 4. **Cinematic UI**: Replaced standard React components with highly polished responsive `framer-motion` physics and glassmorphic designs built via Agentic tooling.
 
 ## Deployment

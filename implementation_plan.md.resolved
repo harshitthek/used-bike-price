@@ -157,6 +157,23 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 
 ---
 
+## Phase 12 — Contract Drift Guardrails & Env Templates ✅
+
+**What we did**:
+- Added `tests/test_frontend_contract.py` to enforce frontend/backend alignment by checking:
+  - `VITE_API_BASE_URL` usage in frontend request path
+  - frontend validation bounds against shared backend contract constants
+  - owner option range coverage (1-5)
+  - engine slider bounds matching contract values
+- Added environment templates:
+  - `.env.example` (backend)
+  - `frontend/.env.example` (frontend)
+- Updated `.gitignore` to keep these template files versioned while still ignoring real secret env files.
+
+**Current test status**: `20 passed`
+
+---
+
 ## Final Test-Set Results
 
 | Model | R² | MAE (₹) | RMSE (₹) | MAPE |

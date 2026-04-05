@@ -20,6 +20,12 @@ npm run build
 - `VITE_API_BASE_URL`: Base URL of the FastAPI backend (default fallback in code: `http://127.0.0.1:8000`)
 - `VITE_API_KEY`: API key sent as `x-api-key`
 
+Use the checked-in template:
+
+```powershell
+copy .env.example .env
+```
+
 Example `.env`:
 
 ```env

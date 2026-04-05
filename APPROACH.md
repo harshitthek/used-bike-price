@@ -277,3 +277,16 @@ Newly covered test cases include:
 - enforced minimum output price floor
 - internal model exception path returning stable 500 errors
 - unknown owner label fallback to rank 3 during preprocessing
+
+## 16. Phase 11 — Contract Drift Guardrails
+To reduce future frontend/backend drift, we added integration guardrails in tests and configuration templates:
+
+- Added `tests/test_frontend_contract.py` to verify that frontend contract behavior matches backend constants:
+  - validation ranges for `power`, `kms_driven`, `age`, and `owner_rank`
+  - owner option coverage (1 through 5)
+  - engine slider min/max alignment
+  - `VITE_API_BASE_URL` usage
+- Added `.env.example` and `frontend/.env.example` for easier and safer local setup.
+- Updated `.gitignore` exceptions to keep env templates tracked while real `.env` files remain ignored.
+
+Current automated checks are now green with `20 passed`.
