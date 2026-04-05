@@ -1,19 +1,20 @@
 # Used Bike Price Prediction
 
-Predict the resale value of used motorcycles in India using machine learning. Trained on real market data scraped from [Droom.in](https://droom.in), achieving **R² = 0.91** with XGBoost after hyperparameter tuning.
+Predict the resale value of used motorcycles in India using machine learning. Trained on real market data scraped from [Droom.in](https://droom.in), achieving **R² = 0.9110** with a blend ensemble model.
 
 ## Results
 
 | Model | R² (Test) | MAE (₹) | RMSE (₹) | MAPE |
 |---|---|---|---|---|
-| **XGBoost** | **0.9109** | **₹10,213** | ₹14,943 | 18.3% |
-| GradientBoosting | 0.9063 | ₹10,129 | ₹15,326 | 18.0% |
+| **BlendEnsemble (XGBoost + GradientBoosting)** | **0.9110** | **₹10,110** | **₹14,934** | **18.0%** |
+| GradientBoosting | 0.9060 | ₹10,134 | ₹15,350 | 18.0% |
+| XGBoost | 0.9057 | ₹10,204 | ₹15,373 | 18.0% |
 | RandomForest | 0.8875 | ₹10,563 | ₹16,795 | 18.2% |
-| LinearRegression | 0.7960 | ₹15,422 | ₹22,613 | 30.6% |
-| Ridge | 0.7960 | ₹15,417 | ₹22,612 | 30.6% |
-| Lasso | 0.7960 | ₹15,419 | ₹22,611 | 30.6% |
+| LinearRegression | 0.8501 | ₹12,861 | ₹19,385 | 23.1% |
+| Lasso | 0.8501 | ₹12,858 | ₹19,383 | 23.1% |
+| Ridge | 0.8500 | ₹12,868 | ₹19,391 | 23.2% |
 
-The best model (XGBoost) explains **91%** of the variance in motorcycle prices. On average, predictions are off by about ₹10,200.
+The best model (BlendEnsemble) explains about **91.1%** of the variance in motorcycle prices. On average, predictions are off by about ₹10,100.
 
 ## Dataset
 
@@ -65,7 +66,7 @@ used-bike-price/
 │   ├── main.py                   # CLI entry point (train & predict)
 │   ├── data_loader.py            # Load & validate CSV data
 │   ├── preprocessing.py          # Clean, deduplicate, feature engineering
-│   ├── models.py                 # 6 regression models + hyperparameter tuning
+│   ├── models.py                 # 7 regression models + hyperparameter tuning
 │   ├── evaluation.py             # Metrics & seaborn visualizations
 │   ├── api.py                    # FastAPI REST backend
 │   └── contracts.py              # Shared API/CLI/preprocessing input contract
@@ -115,7 +116,9 @@ Compatibility note: owner text aliases such as `Fourth Owner Above` and `Fourth 
 
 ## Modeling & Tuning
 
-The project trains six regression models in parallel (Linear, Ridge, Lasso, RandomForest, GradientBoosting, XGBoost) using scikit-learn pipelines with `OneHotEncoder` for categorical features and `StandardScaler` for numeric features.
+The project trains seven regression models in parallel (Linear, Ridge, Lasso, RandomForest, GradientBoosting, XGBoost, BlendEnsemble) using scikit-learn pipelines with `OneHotEncoder` for categorical features and `StandardScaler` for numeric features.
+
+The pipeline also applies derived numeric features for linear-family models (`kms_per_year`, `power_per_year`, `log_kms_driven`, `age_squared`) to improve linear baseline quality without destabilizing tree-model performance.
 
 The best model (selected by 5-fold cross-validation R²) is then fine-tuned using `RandomizedSearchCV` over a hyperparameter grid (learning rate, max depth, n_estimators, min samples/child weight). The tuned model is persisted to `models/best_model.joblib`.
 
@@ -183,7 +186,7 @@ docker run --rm -it used-bike-price
 The platform has been hardened for production deployment:
 1. **Rate Limiting**: Integrated `slowapi` to restrict endpoints (e.g., 10 req/minute on inference).
 2. **Authentication**: Injected `X-API-Key` headers via python-dotenv for backend protection.
-3. **Data Integrity**: Pytest currently includes 23 passing tests, including preprocessing behavior, owner mapping fallbacks, API auth/validation, readiness/contract endpoint checks, prediction boundary checks, internal-error handling, model-not-loaded handling, and frontend/backend contract-alignment checks.
+3. **Data Integrity**: Pytest currently includes 25 passing tests, including preprocessing behavior, derived feature engineering checks, owner mapping fallbacks, API auth/validation, readiness/contract endpoint checks, prediction boundary checks, internal-error handling, model-not-loaded handling, and frontend/backend contract-alignment checks.
 4. **Cinematic UI**: Replaced standard React components with highly polished responsive `framer-motion` physics and glassmorphic designs built via Agentic tooling.
 
 ## Deployment

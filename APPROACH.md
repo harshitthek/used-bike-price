@@ -312,6 +312,26 @@ To improve integration clarity and operational debugging, we extended API intros
 
 Current automated checks are now green with `23 passed`.
 
+## 20. Phase 15 — Selective Derived Features + Blend Ensemble
+We implemented a targeted model-quality pass to improve efficiency without destabilizing inference contracts:
+
+- Added reusable derived features (`kms_per_year`, `power_per_year`, `log_kms_driven`, `age_squared`) inside pipeline transformations.
+- Applied derived features only to linear-family models, preserving base features for tree models.
+- Added a weighted blend ensemble model:
+  - `BlendEnsemble = 0.7 * XGBoost + 0.3 * GradientBoosting`
+- Extended feature-importance plotting to support weighted ensembles by averaging importances across child estimators.
+
+### Before vs After (test set)
+
+| Metric | Before (XGBoost) | After (BlendEnsemble) |
+|---|---|---|
+| R² | 0.9109 | **0.9110** |
+| MAE | ₹10,213 | **₹10,110** |
+| RMSE | ₹14,943 | **₹14,934** |
+| MAPE | 18.3% | **18.0%** |
+
+Current automated checks are now green with `25 passed`.
+
 ## 17. Phase 12 — CI Gatekeeping
 To ensure future changes stay stable without relying on manual runs, we added CI automation:
 

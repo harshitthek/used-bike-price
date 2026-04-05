@@ -27,6 +27,7 @@ from src.contracts import (
     POWER_MIN,
     PREDICTION_FEATURES,
 )
+from src.feature_engineering import DERIVED_NUMERIC_FEATURES
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -166,6 +167,7 @@ def readiness_check(request: Request):
 def contract_check(request: Request):
     return {
         "features": list(PREDICTION_FEATURES),
+        "derived_features": DERIVED_NUMERIC_FEATURES,
         "bounds": {
             "power": {"min": POWER_MIN, "max": POWER_MAX},
             "kms_driven": {"min": KMS_MIN, "max": KMS_MAX},

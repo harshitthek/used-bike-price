@@ -29,6 +29,7 @@ from src.preprocessing import (
 )
 from src.models import train_and_compare, get_best_model, tune_best_model
 from src.contracts import OWNER_RANK_TO_LABEL, OWNER_RANK_MAX, OWNER_RANK_MIN
+from src.feature_engineering import DERIVED_NUMERIC_FEATURES
 from src.evaluation import (
     evaluate_on_test,
     plot_model_comparison,
@@ -79,6 +80,7 @@ def run_train(data_path: str | None = None):
     num_features = [c for c in NUMERIC_FEATURES + ["owner_rank"] if c in X.columns]
 
     print(f"\n  Features: {cat_features + num_features}")
+    print(f"  Derived features (pipeline, linear models): {DERIVED_NUMERIC_FEATURES}")
     print(f"  Target: {TARGET}")
 
     # ── 3. Train/test split ────────────────────────────────────

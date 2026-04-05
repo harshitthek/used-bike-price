@@ -157,7 +157,29 @@ def plot_feature_importance(
     sns.set_theme(style="whitegrid", font_scale=1.0)
 
     model = pipe.named_steps["model"]
-    if not hasattr(model, "feature_importances_"):
+
+    importances = None
+    if hasattr(model, "feature_importances_"):
+        importances = model.feature_importances_
+    elif hasattr(model, "estimators_"):
+        # Weighted ensembles like VotingRegressor can expose importances
+        # through their fitted child estimators.
+        estimators = list(model.estimators_)
+        weights = list(getattr(model, "weights", None) or [1.0] * len(estimators))
+
+        weighted_importances = []
+        weighted_values = []
+        for est, w in zip(estimators, weights):
+            if hasattr(est, "feature_importances_"):
+                weighted_importances.append(est.feature_importances_)
+                weighted_values.append(float(w))
+
+        if weighted_importances:
+            total_weight = sum(weighted_values)
+            norm_weights = [w / total_weight for w in weighted_values]
+            importances = np.average(np.vstack(weighted_importances), axis=0, weights=norm_weights)
+
+    if importances is None:
         print(f"  Skipping feature importance ({model_name} has no feature_importances_)")
         return ""
 
@@ -175,7 +197,6 @@ def plot_feature_importance(
             name = name.replace(prefix, "")
         clean_names.append(name)
 
-    importances = model.feature_importances_
     indices = np.argsort(importances)
 
     fig, ax = plt.subplots(figsize=(10, max(5, len(clean_names) * 0.3)))

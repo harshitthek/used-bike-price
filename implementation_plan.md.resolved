@@ -220,6 +220,27 @@ Transform the original toy demo (10-row inline data, single LinearRegression) in
 
 ---
 
+## Phase 16 — Ensemble Upgrade & Selective Feature Engineering ✅
+
+**What we did**:
+- Added `src/feature_engineering.py` with reusable derived features:
+  - `kms_per_year`
+  - `power_per_year`
+  - `log_kms_driven`
+  - `age_squared`
+- Applied derived features selectively to linear-family models only, while keeping tree models on the stable base feature set.
+- Added `BlendEnsemble` model (`0.7 * XGBoost + 0.3 * GradientBoosting`) in `src/models.py`.
+- Extended `src/evaluation.py` to compute feature importance for weighted ensembles by averaging child-estimator importances.
+- Added unit tests for feature engineering in `tests/test_feature_engineering.py` and extended API contract tests.
+
+**Benchmark impact (test set)**:
+- Previous best (XGBoost): `R²=0.9109`, `MAE=₹10,213`, `RMSE=₹14,943`, `MAPE=18.3%`
+- New best (BlendEnsemble): `R²=0.9110`, `MAE=₹10,110`, `RMSE=₹14,934`, `MAPE=18.0%`
+
+**Current test status**: `25 passed`
+
+---
+
 ## Final Test-Set Results
 
 | Model | R² | MAE (₹) | RMSE (₹) | MAPE |

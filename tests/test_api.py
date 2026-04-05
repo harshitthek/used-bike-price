@@ -13,6 +13,7 @@ from src.contracts import (
     POWER_MIN,
     PREDICTION_FEATURES,
 )
+from src.feature_engineering import DERIVED_NUMERIC_FEATURES
 
 # Override the fastAPI limiter so tests don't fail due to rate limits
 client = TestClient(app)
@@ -65,6 +66,7 @@ def test_contract_endpoint_exposes_expected_bounds():
 
     assert response.status_code == 200
     assert payload["features"] == list(PREDICTION_FEATURES)
+    assert payload["derived_features"] == DERIVED_NUMERIC_FEATURES
     assert payload["bounds"]["power"]["min"] == POWER_MIN
     assert payload["bounds"]["power"]["max"] == POWER_MAX
     assert payload["bounds"]["kms_driven"]["min"] == KMS_MIN

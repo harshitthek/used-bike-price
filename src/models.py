@@ -7,10 +7,12 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from sklearn.model_selection import cross_val_score, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
+
+from src.feature_engineering import DERIVED_NUMERIC_FEATURES, add_derived_features
 
 try:
     from xgboost import XGBRegressor
@@ -44,6 +46,31 @@ def get_models() -> Dict[str, object]:
             verbosity=0,
         )
 
+        # Weighted blend improves robustness across price segments.
+        models["BlendEnsemble"] = VotingRegressor([
+            (
+                "xgb",
+                XGBRegressor(
+                    n_estimators=300,
+                    max_depth=3,
+                    learning_rate=0.2,
+                    min_child_weight=1,
+                    random_state=42,
+                    verbosity=0,
+                ),
+            ),
+            (
+                "gb",
+                GradientBoostingRegressor(
+                    n_estimators=200,
+                    max_depth=5,
+                    learning_rate=0.1,
+                    min_samples_leaf=5,
+                    random_state=42,
+                ),
+            ),
+        ], weights=[0.7, 0.3])
+
     return models
 
 
@@ -53,6 +80,7 @@ def build_pipeline(
     model: object,
     categorical_features: List[str],
     numeric_features: List[str],
+    use_derived_features: bool = True,
 ) -> Pipeline:
     """Wrap a model in a preprocessing + model pipeline.
 
@@ -60,18 +88,26 @@ def build_pipeline(
     - OneHotEncoder for categorical (handle_unknown='ignore')
     - StandardScaler for numeric
     """
+    expanded_numeric = list(numeric_features)
+    if use_derived_features:
+        expanded_numeric += [f for f in DERIVED_NUMERIC_FEATURES if f not in expanded_numeric]
+
     preprocessor = ColumnTransformer(
         transformers=[
             ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), categorical_features),
-            ("num", StandardScaler(), numeric_features),
+            ("num", StandardScaler(), expanded_numeric),
         ],
         remainder="passthrough",
     )
 
-    return Pipeline(steps=[
+    steps = []
+    if use_derived_features:
+        steps.append(("feature_engineering", FunctionTransformer(add_derived_features, validate=False)))
+    steps.extend([
         ("preprocessor", preprocessor),
         ("model", model),
     ])
+    return Pipeline(steps=steps)
 
 
 # ── Training & comparison ──────────────────────────────────────
@@ -99,9 +135,16 @@ def train_and_compare(
     print("=" * 60)
 
     for name, model in models.items():
-        print(f"\n  Training {name}...", end=" ", flush=True)
+        use_derived = name in {"LinearRegression", "Ridge", "Lasso"}
+        variant = "derived" if use_derived else "base"
+        print(f"\n  Training {name} ({variant})...", end=" ", flush=True)
 
-        pipe = build_pipeline(model, categorical_features, numeric_features)
+        pipe = build_pipeline(
+            model,
+            categorical_features,
+            numeric_features,
+            use_derived_features=use_derived,
+        )
 
         # Cross-validation scores
         r2_scores = cross_val_score(pipe, X_train, y_train, cv=cv_folds, scoring="r2", n_jobs=-1)
