@@ -83,9 +83,10 @@ def test_readiness_reports_not_ready(monkeypatch):
     monkeypatch.setattr(api_module, "model_load_error", "Model not found")
     monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
 
-    response = client.get("/ready")
-    assert response.status_code == 503
-    assert "Model not found" in response.text
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["ready"] is False
+    assert response.json()["model_load_error"] == "Model not found"
 
 
 def test_readiness_reports_ready(monkeypatch):

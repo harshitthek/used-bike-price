@@ -96,12 +96,8 @@ def load_artifacts():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Lazy loading via endpoints to prevent Render deployment crash on large models
-    # but we can try to pre-load here if available and lightweight
-    try:
-        load_artifacts()
-    except Exception:
-        pass
+    # Completely lazy model loading!
+    # Server will bind to port instantly for Render health checks.
     yield
 
 app = FastAPI(
@@ -158,15 +154,7 @@ def health_check(request: Request):
 
 
 @app.get("/ready")
-@limiter.limit("30/minute")
-def readiness_check(request: Request):
-    if bike_model is None:
-        load_artifacts()
-    if bike_model is None:
-        raise HTTPException(
-            status_code=503,
-            detail=model_load_error or "Model is not ready.",
-        )
+def ready():
     return {"status": "ok"}
 
 
@@ -188,8 +176,11 @@ def contract_check(request: Request):
 @app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 def predict_price(request: Request, features: BikeFeatures):
+    global bike_model
     if bike_model is None:
+        print("Loading model...")
         load_artifacts()
+        
     if bike_model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. Try restarting the server or training the model.")
 
