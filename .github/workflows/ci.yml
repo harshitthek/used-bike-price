@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 jobs:
+
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -25,6 +26,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Lint (optional but recommended)
+        run: |
+          pip install flake8
+          flake8 . || true
 
       - name: Run pytest
         run: PYTHONPATH=. pytest -q
@@ -49,7 +55,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm ci
+
+      - name: Lint frontend (optional)
+        run: npm run lint || true
 
       - name: Build frontend
         run: npm run build

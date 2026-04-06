@@ -1,3 +1,4 @@
+![CI](https://github.com/harshitthek/used-bike-price/actions/workflows/ci.yml/badge.svg)
 # Used Bike Price Prediction
 
 Predict the resale value of used motorcycles in India using machine learning. Trained on real market data scraped from [Droom.in](https://droom.in), achieving **R² = 0.9110** with a blend ensemble model.
