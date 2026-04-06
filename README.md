@@ -14,7 +14,7 @@
 - Scikit-learn
 
 ## Model Details
-- R² Score: 0.91
+- Rï¿½ Score: 0.91
 - Features: brand, year/age, kms_driven, power/engine_cc, owner
 
 ## API Usage
@@ -65,6 +65,18 @@ cd frontend
 npm install
 npm run dev
 \\\
+
+## Production Deployment (Render)
+
+**Build Command:**
+```bash
+pip install -r requirements.txt
+```
+
+**Start Command:**
+```bash
+uvicorn src.api:app --host 0.0.0.0 --port $PORT
+```
 
 ## Screenshots
 *(Add screenshots of your UI here)*

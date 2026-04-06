@@ -81,6 +81,7 @@ def test_contract_endpoint_exposes_expected_bounds():
 def test_readiness_reports_not_ready(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", None)
     monkeypatch.setattr(api_module, "model_load_error", "Model not found")
+    monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
 
     response = client.get("/ready")
     assert response.status_code == 503
@@ -90,10 +91,11 @@ def test_readiness_reports_not_ready(monkeypatch):
 def test_readiness_reports_ready(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", DummyModel())
     monkeypatch.setattr(api_module, "model_load_error", None)
+    monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
 
     response = client.get("/ready")
     assert response.status_code == 200
-    assert response.json()["ready"] is True
+    assert response.json()["status"] == "ok"
 
 def test_predict_requires_valid_api_key():
     # Without X-API-Key
@@ -158,6 +160,7 @@ def test_predict_success_returns_estimate(monkeypatch):
 
 def test_predict_returns_503_when_model_missing(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", None)
+    monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
 
     response = client.post(
         "/predict",

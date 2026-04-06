@@ -96,7 +96,12 @@ def load_artifacts():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    load_artifacts()
+    # Lazy loading via endpoints to prevent Render deployment crash on large models
+    # but we can try to pre-load here if available and lightweight
+    try:
+        load_artifacts()
+    except Exception:
+        pass
     yield
 
 app = FastAPI(
@@ -137,7 +142,7 @@ class PredictionResponse(BaseModel):
 @app.get("/")
 @limiter.limit("5/minute")
 def read_root(request: Request):
-    return {"message": "Welcome to the Used Bike Price Predictor API. Go to /docs for the swagger UI."}
+    return {"message": "API running"}
 
 @app.get("/health")
 @limiter.limit("30/minute")
@@ -156,11 +161,13 @@ def health_check(request: Request):
 @limiter.limit("30/minute")
 def readiness_check(request: Request):
     if bike_model is None:
+        load_artifacts()
+    if bike_model is None:
         raise HTTPException(
             status_code=503,
             detail=model_load_error or "Model is not ready.",
         )
-    return {"ready": True}
+    return {"status": "ok"}
 
 
 @app.get("/contract")
@@ -181,6 +188,8 @@ def contract_check(request: Request):
 @app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 def predict_price(request: Request, features: BikeFeatures):
+    if bike_model is None:
+        load_artifacts()
     if bike_model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. Try restarting the server or training the model.")
 
