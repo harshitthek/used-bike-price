@@ -1,9 +1,29 @@
 ![CI](https://github.com/harshitthek/used-bike-price/actions/workflows/ci.yml/badge.svg)
 # Used Bike Price Prediction
 
-Predict the resale value of used motorcycles in India using machine learning. Trained on real market data scraped from [Droom.in](https://droom.in), achieving **R² = 0.9110** with a blend ensemble model.
+## Project Overview
+Predict the resale value of used motorcycles in India using machine learning. This project provides a complete end-to-end solution: from data preprocessing and model training to a full-stack web application for user predictions. Trained on real market data scraped from [Droom.in](https://droom.in), achieving **R² = 0.9110** with a blend ensemble model.
 
-## Results
+## Tech Stack
+- **Frontend**: React, Vite, Tailwind CSS v4 (Glassmorphism UI)
+- **Backend**: FastAPI, Python (REST API with rate-limiting)
+- **Machine Learning**: Scikit-Learn, XGBoost, Pandas, Numpy (Blend Ensemble)
+- **Deployment**: Render (Backend), Vercel (Frontend)
+
+## Live Demo
+- **Frontend Application**: [Insert Vercel URL here]
+- **API Endpoint**: [Insert Render URL here]
+
+## Screenshots
+*(Add screenshots of your UI here)*
+- `![Dashboard](./docs/screenshot1.png)`
+
+## Model Details & Performance
+
+### Accuracy (R²)
+The best model (**BlendEnsemble: XGBoost + GradientBoosting**) achieved an **R² (Accuracy) of 0.9110 (91.10%)** in explaining the variance of motorcycle prices. On average, predictions are off by about ₹10,110 (MAE).
+
+### Result Metrics
 
 | Model | R² (Test) | MAE (₹) | RMSE (₹) | MAPE |
 |---|---|---|---|---|
@@ -17,16 +37,25 @@ Predict the resale value of used motorcycles in India using machine learning. Tr
 
 The best model (BlendEnsemble) explains about **91.1%** of the variance in motorcycle prices. On average, predictions are off by about ₹10,100.
 
-## Dataset
-
+## Dataset Used
 **Source**: [Used Bikes Prices in India](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho) (Kaggle / Droom.in scrape)
 - **32,648 raw listings** → **7,007 unique clean rows** after deduplication & outlier removal
 - **19 brands**: Bajaj, Royal Enfield, Honda, Yamaha, KTM, Hero, TVS, Suzuki, Kawasaki, Harley-Davidson, Benelli, Ducati, Triumph, Hyosung, BMW, Jawa, Mahindra, Indian, and more
-- **Features used**: `brand`, `power` (cc), `kms_driven`, `age`, `owner`, `owner_rank`
-- **Target**: `price` (₹)
 
-## Setup
+## Features
+The predictive model uses the following key features:
+- **`brand`**: Brand of the motorcycle (Categorical)
+- **`power` (cc)**: Engine capacity in cubic centimeters (Numerical)
+- **`kms_driven`**: Total distance covered by the bike in kilometers (Numerical)
+- **`age`**: Age of the motorcycle in years (Numerical)
+- **`owner`**: Type of ownership (1st owner, 2nd owner, etc.)
+- **`owner_rank`**: Ordinal encoded version of the ownership (Numerical)
 
+**Target Variable**: **`price`** (₹) - Predicted resale value of the bike
+
+## Setup & How to Run
+
+### Installation
 1. Create and activate virtual environment:
    ```powershell
    python -m venv .venv
@@ -49,6 +78,23 @@ The best model (BlendEnsemble) explains about **91.1%** of the variance in motor
 5. Create local env files from templates:
    - copy `.env.example` to `.env`
    - copy `frontend/.env.example` to `frontend/.env`
+
+### Running the Application
+
+**1. Start the FastAPI Backend Server**
+Open a terminal and run:
+```powershell
+uvicorn src.api:app --reload
+```
+*The API will be available at http://localhost:8000*
+
+**2. Start the React Frontend**
+Open a new terminal and run:
+```powershell
+cd frontend
+npm run dev
+```
+*The web dashboard will be available at http://localhost:5173*
 
 ## Project Structure
 
