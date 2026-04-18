@@ -21,6 +21,9 @@ models/
 *.joblib
 *.pkl
 
+# Keep production model versioned for deployment
+!models/best_model.joblib
+
 # OS/editor
 .DS_Store
 Thumbs.db

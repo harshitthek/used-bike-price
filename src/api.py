@@ -37,6 +37,34 @@ logger = logging.getLogger(__name__)
 API_KEY = os.getenv("API_KEY", "dev_12345")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
+
+def resolve_allowed_origins() -> list[str]:
+    """Build allowed CORS origins from environment with local dev fallbacks."""
+    raw_origins = os.getenv("FRONTEND_URLS", "")
+    origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
+
+    frontend_url = FRONTEND_URL.strip().rstrip("/")
+    if frontend_url:
+        origins.append(frontend_url)
+
+    # If local frontend is used, allow both loopback hostnames to avoid CORS mismatch.
+    is_local_dev = any("localhost" in origin or "127.0.0.1" in origin for origin in origins)
+    if is_local_dev or not origins:
+        origins.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
+
+    # Preserve order while removing duplicates.
+    seen = set()
+    unique_origins = []
+    for origin in origins:
+        if origin not in seen:
+            seen.add(origin)
+            unique_origins.append(origin)
+
+    return unique_origins
+
+
+ALLOWED_ORIGINS = resolve_allowed_origins()
+
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -114,7 +142,7 @@ app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_hand
 # Enable CORS for frontend securely
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
