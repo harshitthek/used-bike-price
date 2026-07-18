@@ -24,6 +24,8 @@
   --color-accent: #6366f1;
   --color-accent-hover: #818cf8;
   --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-warning-hover: #fbbf24;
   --color-danger: #ef4444;
 }
 
@@ -159,6 +161,17 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 .price-reveal {
   animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Warning pulse animation */
+@keyframes warning-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.warning-pulse-border {
+  animation: warning-pulse 2s infinite;
 }
 
 /* Neutral glass submit button */

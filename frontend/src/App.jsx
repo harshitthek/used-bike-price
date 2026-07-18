@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Zap, ChevronRight, CheckCircle2, AlertTriangle, Gauge, Calendar, Road, Users, Bike } from 'lucide-react'
+import { Zap, ChevronRight, CheckCircle2, AlertTriangle, Gauge, Calendar, Road, Users, Bike, Info } from 'lucide-react'
 import { NumberTicker } from "@/components/ui/NumberTicker"
 import { GlassCard } from "@/components/ui/GlassCard"
 
@@ -118,7 +118,7 @@ function App() {
       }
 
       setTimeout(() => {
-        setResult(data.estimated_price)
+        setResult(data)
         setLoading(false)
       }, 1200)
     } catch (err) {
@@ -379,19 +379,47 @@ function App() {
                     transition={{ type: 'spring', stiffness: 200, damping: 20 }}
                     className="text-center"
                   >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-[var(--color-success)] text-xs font-semibold mb-6">
-                      <CheckCircle2 size={14} />
-                      Valuation Complete
-                    </div>
+                    {result.prediction_quality?.level === 'low' ? (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 text-[var(--color-warning)] text-xs font-semibold mb-6 warning-pulse-border">
+                        <AlertTriangle size={14} />
+                        Low Confidence (Out of Range)
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-[var(--color-success)] text-xs font-semibold mb-6">
+                        <CheckCircle2 size={14} />
+                        High Confidence Valuation
+                      </div>
+                    )}
 
                     <p className="text-sm text-[var(--color-text-muted)] mb-2 uppercase tracking-widest font-medium">Estimated Market Value</p>
 
                     <div className="price-reveal">
                       <p className="text-6xl flex items-center justify-center gap-1 font-black tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-1">
                         <span>₹</span>
-                        <NumberTicker value={result} />
+                        <NumberTicker value={result.estimated_price} />
                       </p>
                     </div>
+                    
+                    {result.adjustments && result.adjustments.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="mt-6 p-4 rounded-xl bg-[var(--color-warning)]/5 border border-[var(--color-warning)]/20 text-left"
+                      >
+                        <div className="flex items-center gap-2 text-[var(--color-warning)] text-xs font-bold uppercase tracking-wider mb-2">
+                          <Info size={14} />
+                          Data Normalization Applied
+                        </div>
+                        <div className="text-xs text-[var(--color-text-secondary)] space-y-1">
+                          {result.adjustments.map((adj, i) => (
+                            <p key={i}>
+                              <strong className="text-[var(--color-text-primary)] capitalize">{adj.feature.replace('_', ' ')}</strong> was clamped from {adj.original} to {adj.adjusted} to match the training bounds.
+                            </p>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
 
                     <div className="mt-8 space-y-3 text-left">
                       <DetailRow label="Brand" value={formData.brand} />
