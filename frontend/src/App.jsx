@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, CheckCircle2, AlertTriangle, Gauge, Calendar, Road, Users, Bike, Info, ArrowLeft } from 'lucide-react'
+import { 
+  CheckCircle2, AlertTriangle, Info, Bike, Settings2, 
+  DatabaseZap, ShieldAlert, Sparkles, Activity
+} from 'lucide-react'
 import { NumberTicker } from "@/components/ui/NumberTicker"
 import { MagicCard } from "@/components/ui/magic-card"
 import { AuroraBackground } from "@/components/ui/aurora-background"
 import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
+import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Separator } from "@/components/ui/separator"
 
 const BRANDS = [
   "Bajaj", "Benelli", "Ducati", "Harley-Davidson", "Hero", "Honda",
@@ -51,9 +58,12 @@ function App() {
   const [contract, setContract] = useState(null)
   const [contractError, setContractError] = useState(null)
   
-  const [view, setView] = useState('form') // 'form', 'loading', 'result', 'error'
+  const [status, setStatus] = useState('idle') // 'idle', 'loading', 'success', 'error'
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  
+  // Debounce ref
+  const debounceTimer = useRef(null)
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/contract`)
@@ -65,23 +75,13 @@ function App() {
       .catch(err => setContractError(err.message))
   }, [])
 
-  const handleChange = (name, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'brand' ? value : Number(value)
-    }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setView('loading')
-    setResult(null)
+  const fetchPrediction = async (dataToPredict) => {
+    setStatus('loading')
     setError(null)
-
-    const validationError = validateFormData(formData, contract)
+    const validationError = validateFormData(dataToPredict, contract)
     if (validationError) {
       setError(validationError)
-      setView('error')
+      setStatus('error')
       return
     }
 
@@ -96,64 +96,70 @@ function App() {
           'x-api-key': import.meta.env.VITE_API_KEY || "dev_12345"
         },
         signal: controller.signal,
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToPredict),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        let message = data?.detail || 'Prediction request failed.'
-        if (res.status === 401) message = 'Authentication failed. Check your API key.'
-        if (res.status === 422) message = 'Some input values are outside allowed limits.'
-        if (res.status === 429) message = 'Too many requests. Please wait and try again.'
-        if (res.status >= 500) message = 'Server error while generating prediction.'
-        throw new Error(message)
+        throw new Error(data?.detail || 'Prediction request failed.')
       }
-
-      setTimeout(() => {
-        setResult(data)
-        setView('result')
-      }, 1200)
+      setResult(data)
+      setStatus('success')
     } catch (err) {
-      setTimeout(() => {
-        if (err?.name === 'AbortError') {
-          setError('Prediction request timed out. Please try again.')
-        } else {
-          setError(err?.message || 'Could not connect to the prediction API.')
-        }
-        setView('error')
-      }, 500)
+      if (err?.name === 'AbortError') {
+        setError('Prediction timed out.')
+      } else {
+        setError(err?.message || 'Could not connect to API.')
+      }
+      setStatus('error')
     } finally {
       clearTimeout(timeoutId)
     }
   }
 
+  // Live Debounced Preview
+  useEffect(() => {
+    if (!contract) return
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      fetchPrediction(formData)
+    }, 800) // 800ms debounce
+    return () => clearTimeout(debounceTimer.current)
+  }, [formData, contract])
+
+  const handleChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'brand' ? value : Number(value)
+    }))
+  }
+
+  const handleExplicitSubmit = (e) => {
+    e.preventDefault()
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    fetchPrediction(formData)
+  }
+
   if (contractError) {
     return (
-      <AuroraBackground>
-        <div className="z-10 flex flex-col items-center justify-center p-6">
-          <MagicCard className="max-w-md text-center p-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-semibold mb-4">
-              <AlertTriangle size={14} />
-              Initialization Failed
-            </div>
-            <p className="text-zinc-400 mb-6">{contractError}</p>
-            <Button variant="outline" onClick={() => window.location.reload()}>Retry Connection</Button>
-          </MagicCard>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full shadow-border bg-[#121214] p-8 rounded-2xl text-center">
+          <ShieldAlert className="mx-auto text-red-500 mb-4" size={32} />
+          <h2 className="text-xl font-bold mb-2">Initialization Failed</h2>
+          <p className="text-zinc-400 mb-6 text-sm">{contractError}</p>
+          <Button variant="outline" onClick={() => window.location.reload()} className="w-full">Retry Connection</Button>
         </div>
-      </AuroraBackground>
+      </div>
     )
   }
 
   if (!contract) {
     return (
-      <AuroraBackground>
-         <div className="z-10 flex flex-col items-center gap-4">
-           <div className="relative">
-              <div className="h-12 w-12 rounded-full border-2 border-white/10" />
-              <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
-           </div>
-           <p className="text-sm font-medium text-zinc-400 tracking-wider uppercase">Loading model schema...</p>
-         </div>
-      </AuroraBackground>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Activity className="animate-pulse text-blue-500" size={32} />
+          <p className="text-xs tracking-widest uppercase text-zinc-500 font-medium">Booting Model...</p>
+        </div>
+      </div>
     )
   }
 
@@ -163,322 +169,311 @@ function App() {
   });
 
   return (
-    <AuroraBackground>
-      {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-              <Bike size={20} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">MotoValue</h1>
-              <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">AI Price Engine</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-md">
-            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
-            Model Active
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="relative z-10 w-full max-w-2xl mx-auto px-4 pt-24 pb-12 flex flex-col items-center justify-center min-h-screen">
+    <TooltipProvider>
+      <div className="min-h-screen bg-[#0a0a0c] noise-bg text-zinc-100 overflow-x-hidden selection:bg-blue-500/30">
         
-        {/* Title */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="text-center mb-10 w-full"
-        >
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4 text-white">
-            Valuation <span className="gradient-text">Engine</span>
-          </h2>
-          <p className="text-zinc-400 text-sm md:text-base max-w-md mx-auto">
-            Powered by a highly tuned XGBoost model. Configure your motorcycle parameters below to predict its market value.
-          </p>
-        </motion.div>
-
-        {/* Central Wizard Card */}
-        <motion.div 
-          className="w-full relative"
-          layout
-        >
-          <MagicCard className="w-full p-1 shadow-2xl">
-            <div className="bg-zinc-950/80 rounded-xl p-6 md:p-8 backdrop-blur-xl border border-white/5 w-full min-h-[400px] flex flex-col justify-center">
-              
-              <AnimatePresence mode="wait">
-                
-                {view === 'form' && (
-                  <motion.form 
-                    key="form"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
-                    transition={{ duration: 0.3 }}
-                    onSubmit={handleSubmit} 
-                    className="flex flex-col gap-8 w-full"
-                  >
-                    
-                    {/* Brand Select */}
-                    <div className="space-y-3">
-                      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                         Brand
-                      </label>
-                      <Select value={formData.brand} onValueChange={(v) => handleChange('brand', v)}>
-                        <SelectTrigger className="w-full h-12 bg-white/5 border-white/10 text-white rounded-xl focus:ring-blue-500">
-                          <SelectValue placeholder="Select a brand" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100 max-h-[300px]">
-                          {BRANDS.map(b => (
-                            <SelectItem key={b} value={b} className="focus:bg-blue-500 focus:text-white cursor-pointer rounded-lg">
-                              {b}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Engine & Age Row */}
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
-                            <Gauge size={14}/> Engine
-                          </label>
-                          <span className="text-sm font-bold text-white">{formData.power} <span className="text-zinc-500 font-normal text-xs">cc</span></span>
-                        </div>
-                      <div className="pt-2 pb-1">
-                          <Slider 
-                            value={[formData.power]} 
-                            min={contract.schema.properties.power.minimum} 
-                            max={contract.schema.properties.power.maximum} 
-                            step={25}
-                            onValueChange={([v]) => handleChange('power', v)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
-                            <Calendar size={14}/> Age
-                          </label>
-                          <span className="text-sm font-bold text-white">{formData.age} <span className="text-zinc-500 font-normal text-xs">yrs</span></span>
-                        </div>
-                      <div className="pt-2 pb-1">
-                          <Slider 
-                            value={[formData.age]} 
-                            min={contract.schema.properties.age.minimum} 
-                            max={contract.schema.properties.age.maximum} 
-                            step={1}
-                            onValueChange={([v]) => handleChange('age', v)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Odometer */}
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-end">
-                        <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
-                          <Road size={14}/> Odometer
-                        </label>
-                        <span className="text-sm font-bold text-white">{formData.kms_driven.toLocaleString('en-IN')} <span className="text-zinc-500 font-normal text-xs">km</span></span>
-                      </div>
-                      <div className="pt-2 pb-1">
-                        <Slider 
-                          value={[formData.kms_driven]} 
-                          min={contract.schema.properties.kms_driven.minimum} 
-                          max={contract.schema.properties.kms_driven.maximum} 
-                          step={1000}
-                          onValueChange={([v]) => handleChange('kms_driven', v)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Ownership Pills */}
-                    <div className="space-y-3">
-                      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
-                        <Users size={14} /> Owners
-                      </label>
-                      <div className="flex gap-2 w-full p-1 bg-white/5 rounded-xl border border-white/5">
-                        {ownerOptions.map(opt => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => handleChange('owner_rank', opt.value)}
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-300 cursor-pointer
-                              ${formData.owner_rank === opt.value
-                                ? 'bg-blue-500 text-white shadow-lg'
-                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                              }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="pt-4">
-                      <Button 
-                        type="submit" 
-                        className="w-full h-14 rounded-xl bg-white text-black hover:bg-zinc-200 text-base font-bold transition-transform active:scale-95 group relative overflow-hidden"
-                      >
-                        <span className="relative z-10 flex items-center gap-2">
-                          Analyze Value <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                        </span>
-                      </Button>
-                    </div>
-
-                  </motion.form>
-                )}
-
-                {view === 'loading' && (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center h-full gap-6 py-12"
-                  >
-                    <div className="relative">
-                      <div className="h-20 w-20 rounded-full border-2 border-white/10" />
-                      <div className="absolute inset-0 h-20 w-20 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Zap className="text-blue-500 animate-pulse" size={24} />
-                      </div>
-                    </div>
-                    <div className="text-center space-y-2">
-                      <p className="text-lg font-bold text-white tracking-wide">Processing Data</p>
-                      <p className="text-sm text-zinc-400">Running XGBoost inference...</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {view === 'result' && result && (
-                  <motion.div
-                    key="result"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                    className="flex flex-col items-center text-center py-4 w-full"
-                  >
-                    {/* Quality Badge */}
-                    {result.prediction_quality?.level === 'low' ? (
-                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-bold uppercase tracking-wider mb-8 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                        <AlertTriangle size={14} />
-                        Low Confidence
-                      </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-8 shadow-[0_0_15px_rgba(52,211,153,0.1)]">
-                        <CheckCircle2 size={14} />
-                        High Confidence
-                      </div>
-                    )}
-
-                    <p className="text-xs text-zinc-500 mb-3 uppercase tracking-[0.2em] font-bold">Estimated Market Value</p>
-
-                    <div className="mb-8">
-                      <h3 className="text-6xl md:text-7xl flex items-center justify-center font-black tracking-tighter gradient-text drop-shadow-2xl">
-                        <span className="text-4xl md:text-5xl mr-1 text-white/50">₹</span>
-                        <NumberTicker value={result.estimated_price} />
-                      </h3>
-                    </div>
-                    
-                    {/* OOD Adjustments Alert */}
-                    {result.adjustments && result.adjustments.length > 0 && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                        className="w-full mb-8 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-left backdrop-blur-sm"
-                      >
-                        <div className="flex items-center gap-2 text-amber-500 text-[10px] font-black uppercase tracking-widest mb-3">
-                          <Info size={14} />
-                          Data Normalization Applied
-                        </div>
-                        <div className="text-xs text-zinc-400 space-y-2">
-                          {result.adjustments.map((adj, i) => (
-                            <div key={i} className="flex justify-between items-center border-b border-white/5 pb-1 last:border-0 last:pb-0">
-                              <span className="capitalize text-zinc-300 font-medium">{adj.feature.replace('_', ' ')}</span>
-                              <span>clamped: <span className="line-through opacity-50 mr-1">{adj.original}</span> {adj.adjusted}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* Summary Chips */}
-                    <div className="flex flex-wrap justify-center gap-2 mb-8">
-                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.brand}</div>
-                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.power}cc</div>
-                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.age}y</div>
-                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.kms_driven.toLocaleString()}km</div>
-                    </div>
-
-                    <Button 
-                      variant="outline" 
-                      className="w-full rounded-xl h-12 border-white/10 hover:bg-white/10 hover:text-white transition-colors"
-                      onClick={() => setView('form')}
-                    >
-                      <ArrowLeft size={16} className="mr-2" /> Start New Valuation
-                    </Button>
-                  </motion.div>
-                )}
-
-                {view === 'error' && (
-                  <motion.div
-                    key="error"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center text-center py-12"
-                  >
-                    <div className="h-16 w-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
-                      <AlertTriangle size={28} className="text-red-500" />
-                    </div>
-                    <p className="text-lg font-bold text-white mb-2">Request Failed</p>
-                    <p className="text-sm text-zinc-400 max-w-sm mb-8">{error}</p>
-                    <Button 
-                      variant="outline" 
-                      className="rounded-xl border-white/10 hover:bg-white/10 hover:text-white"
-                      onClick={() => setView('form')}
-                    >
-                      Try Again
-                    </Button>
-                  </motion.div>
-                )}
-                
-              </AnimatePresence>
+        {/* Navigation / Top Bar */}
+        <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0a0a0c]/80 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Bike size={16} className="text-white" />
+              </div>
+              <span className="font-semibold tracking-tight text-white">MotoValue AI</span>
             </div>
-          </MagicCard>
-        </motion.div>
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-mono text-[10px] uppercase tracking-wider hidden sm:flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                XGBoost Live
+              </Badge>
+            </div>
+          </div>
+        </header>
 
-      </main>
-    </AuroraBackground>
-  )
-}
+        {/* Hero Section */}
+        <section className="max-w-7xl mx-auto px-6 pt-16 pb-12 relative">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0a0a0c] to-[#0a0a0c]" />
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl"
+          >
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 text-white">
+              Predict market value with <span className="gradient-text">precision</span>.
+            </h1>
+            <p className="text-zinc-400 text-lg leading-relaxed">
+              Configure your motorcycle parameters to instantly generate a real-time valuation utilizing our ensemble machine learning model.
+            </p>
+          </motion.div>
+        </section>
 
-function Zap(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
+        {/* Dashboard Split Layout */}
+        <main className="max-w-7xl mx-auto px-6 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Pane: Configuration Engine */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="shadow-border bg-[#121214] rounded-2xl p-6 lg:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/50 to-transparent" />
+              
+              <div className="flex items-center gap-2 mb-8">
+                <Settings2 size={18} className="text-blue-400" />
+                <h2 className="text-lg font-semibold text-white">Configuration</h2>
+              </div>
+
+              <form onSubmit={handleExplicitSubmit} className="space-y-8">
+                
+                {/* Brand */}
+                <div className="space-y-3">
+                  <label className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 flex justify-between">
+                    Manufacturer
+                  </label>
+                  <Select value={formData.brand} onValueChange={(v) => handleChange('brand', v)}>
+                    <SelectTrigger className="w-full h-11 bg-[#1c1c1f] border-white/10 text-white rounded-lg focus:ring-1 focus:ring-blue-500">
+                      <SelectValue placeholder="Select a brand" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1c1c1f] border-white/10 text-zinc-100">
+                      {BRANDS.map(b => (
+                        <SelectItem key={b} value={b} className="focus:bg-blue-500/20 focus:text-white cursor-pointer rounded-md">
+                          {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Separator className="bg-white/5" />
+
+                {/* Engine Slider */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-baseline">
+                    <label className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                      Engine Displacement
+                    </label>
+                    <span className="font-mono text-sm text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                      {formData.power}cc
+                    </span>
+                  </div>
+                  <div className="pt-1">
+                    <Slider 
+                      value={[formData.power]} 
+                      min={contract.schema.properties.power.minimum} 
+                      max={contract.schema.properties.power.maximum} 
+                      step={25}
+                      onValueChange={([v]) => handleChange('power', v)}
+                    />
+                  </div>
+                </div>
+
+                {/* Age Slider */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-baseline">
+                    <label className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                      Vehicle Age
+                    </label>
+                    <span className="font-mono text-sm text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                      {formData.age} yrs
+                    </span>
+                  </div>
+                  <div className="pt-1">
+                    <Slider 
+                      value={[formData.age]} 
+                      min={contract.schema.properties.age.minimum} 
+                      max={contract.schema.properties.age.maximum} 
+                      step={1}
+                      onValueChange={([v]) => handleChange('age', v)}
+                    />
+                  </div>
+                </div>
+
+                {/* Odometer Slider */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-baseline">
+                    <label className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                      Odometer
+                    </label>
+                    <span className="font-mono text-sm text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                      {formData.kms_driven.toLocaleString()} km
+                    </span>
+                  </div>
+                  <div className="pt-1">
+                    <Slider 
+                      value={[formData.kms_driven]} 
+                      min={contract.schema.properties.kms_driven.minimum} 
+                      max={contract.schema.properties.kms_driven.maximum} 
+                      step={1000}
+                      onValueChange={([v]) => handleChange('kms_driven', v)}
+                    />
+                  </div>
+                </div>
+
+                <Separator className="bg-white/5" />
+
+                {/* Owners Segmented Control */}
+                <div className="space-y-3">
+                  <label className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Previous Owners
+                  </label>
+                  <div className="flex gap-1 p-1 bg-[#1c1c1f] rounded-lg shadow-inner border border-white/5">
+                    {ownerOptions.map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => handleChange('owner_rank', opt.value)}
+                        className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer
+                          ${formData.owner_rank === opt.value
+                            ? 'bg-zinc-700 text-white shadow-sm'
+                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                          }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-white text-black hover:bg-zinc-200 h-10 shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-[0.98] transition-all"
+                >
+                  <Sparkles size={16} className="mr-2" />
+                  Lock Valuation
+                </Button>
+
+              </form>
+            </div>
+          </div>
+
+          {/* Right Pane: Intelligence Dashboard */}
+          <div className="lg:col-span-7 h-full flex flex-col">
+            <AuroraBackground showRadialGradient={true} className="rounded-2xl shadow-border overflow-hidden h-full min-h-[500px]">
+              <div className="w-full h-full p-6 lg:p-10 flex flex-col relative z-10">
+                
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-2">
+                    <DatabaseZap size={18} className="text-indigo-400" />
+                    <h2 className="text-lg font-semibold text-white">Intelligence Dashboard</h2>
+                  </div>
+                  {status === 'loading' && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 font-mono text-[10px] uppercase">
+                      Computing...
+                    </Badge>
+                  )}
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {status === 'error' && (
+                    <motion.div 
+                      key="error"
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="flex-1 flex flex-col items-center justify-center text-center"
+                    >
+                      <AlertTriangle size={32} className="text-red-500 mb-4" />
+                      <p className="text-red-400 font-medium mb-1">Inference Error</p>
+                      <p className="text-sm text-zinc-500">{error}</p>
+                    </motion.div>
+                  )}
+
+                  {status === 'success' && result && (
+                    <motion.div 
+                      key="success"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex-1 flex flex-col"
+                    >
+                      {/* Price Reveal Card */}
+                      <MagicCard className="w-full p-1 mb-8" gradientColor="rgba(99, 102, 241, 0.2)">
+                        <div className="bg-[#0a0a0c]/90 rounded-[14px] p-8 backdrop-blur-xl border border-white/5 flex flex-col items-center justify-center text-center">
+                          <p className="text-[11px] text-zinc-500 mb-3 uppercase tracking-[0.2em] font-semibold">Estimated Market Value</p>
+                          <h3 className="text-6xl md:text-7xl flex items-center font-bold tracking-tighter text-white">
+                            <span className="text-4xl mr-2 text-zinc-600 font-light">₹</span>
+                            <NumberTicker value={result.estimated_price} />
+                          </h3>
+                        </div>
+                      </MagicCard>
+
+                      {/* Analytics Section */}
+                      <div className="bg-[#121214]/80 backdrop-blur-md rounded-xl shadow-border-inner border border-white/5 p-6 mt-auto">
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-4">Diagnostics</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                          <div className="bg-black/30 rounded-lg p-4 border border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-zinc-400 font-medium">Confidence Level</span>
+                              <Tooltip>
+                                <TooltipTrigger><Info size={12} className="text-zinc-600" /></TooltipTrigger>
+                                <TooltipContent>Model's certainty based on training data density.</TooltipContent>
+                              </Tooltip>
+                            </div>
+                            {result.prediction_quality?.level === 'low' ? (
+                              <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20">
+                                Low Confidence
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20">
+                                High Confidence
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="bg-black/30 rounded-lg p-4 border border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-zinc-400 font-medium">Data Integrity</span>
+                            </div>
+                            <span className="text-sm font-mono text-zinc-200">
+                              {result.adjustments?.length > 0 ? `${result.adjustments.length} Adjustments` : 'Pristine Input'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Adjustments Accordion */}
+                        {result.adjustments && result.adjustments.length > 0 && (
+                          <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="adjustments" className="border-white/5">
+                              <AccordionTrigger className="text-sm text-zinc-300 hover:text-white py-3">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle size={14} className="text-amber-500" />
+                                  View OOD Adjustments
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="bg-black/40 rounded-lg overflow-hidden border border-white/5">
+                                  <table className="w-full text-sm text-left">
+                                    <thead className="bg-white/5 text-[10px] uppercase text-zinc-500 tracking-wider">
+                                      <tr>
+                                        <th className="px-4 py-2 font-medium">Feature</th>
+                                        <th className="px-4 py-2 font-medium">Original</th>
+                                        <th className="px-4 py-2 font-medium">Clamped</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                      {result.adjustments.map((adj, idx) => (
+                                        <tr key={idx} className="font-mono text-xs">
+                                          <td className="px-4 py-2 text-zinc-300 capitalize">{adj.feature.replace('_', ' ')}</td>
+                                          <td className="px-4 py-2 text-red-400 line-through opacity-70">{adj.original}</td>
+                                          <td className="px-4 py-2 text-emerald-400">{adj.adjusted}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+              </div>
+            </AuroraBackground>
+          </div>
+        </main>
+      </div>
+    </TooltipProvider>
   )
 }
 
