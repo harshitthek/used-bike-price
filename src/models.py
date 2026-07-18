@@ -1,13 +1,17 @@
 """Define, train, and compare multiple regression models."""
+
 from __future__ import annotations
 
 from typing import Dict, List, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
+from sklearn.ensemble import (
+    RandomForestRegressor,
+    GradientBoostingRegressor,
+    VotingRegressor,
+)
 from sklearn.model_selection import cross_val_score, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
@@ -16,6 +20,7 @@ from src.feature_engineering import DERIVED_NUMERIC_FEATURES, add_derived_featur
 
 try:
     from xgboost import XGBRegressor
+
     HAS_XGBOOST = True
 except ImportError:
     HAS_XGBOOST = False
@@ -27,6 +32,7 @@ DEFAULT_RANDOM_STATE = 42
 
 # ── Model registry ─────────────────────────────────────────────
 
+
 def get_models() -> Dict[str, object]:
     """Return a dict of model_name → estimator."""
     models = {
@@ -34,51 +40,64 @@ def get_models() -> Dict[str, object]:
         "Ridge": Ridge(alpha=1.0),
         "Lasso": Lasso(alpha=1.0, max_iter=5000),
         "RandomForest": RandomForestRegressor(
-            n_estimators=200, max_depth=15, min_samples_leaf=5,
-            random_state=DEFAULT_RANDOM_STATE, n_jobs=-1,
+            n_estimators=200,
+            max_depth=15,
+            min_samples_leaf=5,
+            random_state=DEFAULT_RANDOM_STATE,
+            n_jobs=-1,
         ),
         "GradientBoosting": GradientBoostingRegressor(
-            n_estimators=200, max_depth=5, learning_rate=0.1,
-            min_samples_leaf=5, random_state=DEFAULT_RANDOM_STATE,
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.1,
+            min_samples_leaf=5,
+            random_state=DEFAULT_RANDOM_STATE,
         ),
     }
 
     if HAS_XGBOOST:
         models["XGBoost"] = XGBRegressor(
-            n_estimators=200, max_depth=5, learning_rate=0.1,
-            min_child_weight=5, random_state=DEFAULT_RANDOM_STATE,
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.1,
+            min_child_weight=5,
+            random_state=DEFAULT_RANDOM_STATE,
             verbosity=0,
         )
 
         # Weighted blend improves robustness across price segments.
-        models["BlendEnsemble"] = VotingRegressor([
-            (
-                "xgb",
-                XGBRegressor(
-                    n_estimators=300,
-                    max_depth=3,
-                    learning_rate=0.2,
-                    min_child_weight=1,
-                    random_state=DEFAULT_RANDOM_STATE,
-                    verbosity=0,
+        models["BlendEnsemble"] = VotingRegressor(
+            [
+                (
+                    "xgb",
+                    XGBRegressor(
+                        n_estimators=300,
+                        max_depth=3,
+                        learning_rate=0.2,
+                        min_child_weight=1,
+                        random_state=DEFAULT_RANDOM_STATE,
+                        verbosity=0,
+                    ),
                 ),
-            ),
-            (
-                "gb",
-                GradientBoostingRegressor(
-                    n_estimators=200,
-                    max_depth=5,
-                    learning_rate=0.1,
-                    min_samples_leaf=5,
-                    random_state=DEFAULT_RANDOM_STATE,
+                (
+                    "gb",
+                    GradientBoostingRegressor(
+                        n_estimators=200,
+                        max_depth=5,
+                        learning_rate=0.1,
+                        min_samples_leaf=5,
+                        random_state=DEFAULT_RANDOM_STATE,
+                    ),
                 ),
-            ),
-        ], weights=[0.7, 0.3])
+            ],
+            weights=[0.7, 0.3],
+        )
 
     return models
 
 
 # ── Pipeline builder ────────────────────────────────────────────
+
 
 def build_pipeline(
     model: object,
@@ -94,11 +113,17 @@ def build_pipeline(
     """
     expanded_numeric = list(numeric_features)
     if use_derived_features:
-        expanded_numeric += [f for f in DERIVED_NUMERIC_FEATURES if f not in expanded_numeric]
+        expanded_numeric += [
+            f for f in DERIVED_NUMERIC_FEATURES if f not in expanded_numeric
+        ]
 
     preprocessor = ColumnTransformer(
         transformers=[
-            ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), categorical_features),
+            (
+                "cat",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+                categorical_features,
+            ),
             ("num", StandardScaler(), expanded_numeric),
         ],
         remainder="passthrough",
@@ -106,15 +131,23 @@ def build_pipeline(
 
     steps = []
     if use_derived_features:
-        steps.append(("feature_engineering", FunctionTransformer(add_derived_features, validate=False)))
-    steps.extend([
-        ("preprocessor", preprocessor),
-        ("model", model),
-    ])
+        steps.append(
+            (
+                "feature_engineering",
+                FunctionTransformer(add_derived_features, validate=False),
+            )
+        )
+    steps.extend(
+        [
+            ("preprocessor", preprocessor),
+            ("model", model),
+        ]
+    )
     return Pipeline(steps=steps)
 
 
 # ── Training & comparison ──────────────────────────────────────
+
 
 def train_and_compare(
     X_train: pd.DataFrame,
@@ -151,8 +184,17 @@ def train_and_compare(
         )
 
         # Cross-validation scores
-        r2_scores = cross_val_score(pipe, X_train, y_train, cv=cv_folds, scoring="r2", n_jobs=-1)
-        mae_scores = cross_val_score(pipe, X_train, y_train, cv=cv_folds, scoring="neg_mean_absolute_error", n_jobs=-1)
+        r2_scores = cross_val_score(
+            pipe, X_train, y_train, cv=cv_folds, scoring="r2", n_jobs=-1
+        )
+        mae_scores = cross_val_score(
+            pipe,
+            X_train,
+            y_train,
+            cv=cv_folds,
+            scoring="neg_mean_absolute_error",
+            n_jobs=-1,
+        )
 
         # Fit on full training set
         pipe.fit(X_train, y_train)
@@ -162,12 +204,14 @@ def train_and_compare(
         cv_r2_std = r2_scores.std()
         cv_mae_mean = -mae_scores.mean()  # neg_mae → positive
 
-        results.append({
-            "model": name,
-            "cv_mean_r2": cv_r2_mean,
-            "cv_std_r2": cv_r2_std,
-            "cv_mean_mae": cv_mae_mean,
-        })
+        results.append(
+            {
+                "model": name,
+                "cv_mean_r2": cv_r2_mean,
+                "cv_std_r2": cv_r2_std,
+                "cv_mean_mae": cv_mae_mean,
+            }
+        )
 
         print(f"R²={cv_r2_mean:.4f} (±{cv_r2_std:.4f}), MAE=₹{cv_mae_mean:,.0f}")
 
@@ -200,7 +244,9 @@ def tune_best_model(
     Only supports tree-based models right now.
     """
     if best_name not in ["GradientBoosting", "XGBoost", "RandomForest"]:
-        print(f"  Skipping tuning for {best_name} — currently only tree models are tuned.")
+        print(
+            f"  Skipping tuning for {best_name} — currently only tree models are tuned."
+        )
         return best_pipe
 
     print(f"\n  Tuning {best_name}...")
@@ -231,7 +277,7 @@ def tune_best_model(
         best_pipe,
         param_distributions=param_grid,
         n_iter=10,  # 10 random combinations
-        cv=3,       # 3-fold CV for speed
+        cv=3,  # 3-fold CV for speed
         scoring="r2",
         n_jobs=-1,
         random_state=DEFAULT_RANDOM_STATE,

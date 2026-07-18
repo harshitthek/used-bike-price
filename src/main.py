@@ -4,6 +4,7 @@ Usage:
     python src/main.py              Train all models, evaluate, save best
     python src/main.py --predict    Interactive prediction mode
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,10 +45,17 @@ DEFAULT_MODEL_PATH = MODELS_DIR / "best_model.joblib"
 
 def main():
     parser = argparse.ArgumentParser(description="Used Bike Price Prediction")
-    parser.add_argument("--predict", action="store_true",
-                        help="Run interactive prediction using saved model")
-    parser.add_argument("--data", type=str, default=None,
-                        help="Path to CSV data file (auto-detected if omitted)")
+    parser.add_argument(
+        "--predict",
+        action="store_true",
+        help="Run interactive prediction using saved model",
+    )
+    parser.add_argument(
+        "--data",
+        type=str,
+        default=None,
+        help="Path to CSV data file (auto-detected if omitted)",
+    )
     args = parser.parse_args()
 
     if args.predict:
@@ -59,6 +67,7 @@ def main():
 # ═══════════════════════════════════════════════════════════════
 #  TRAIN MODE
 # ═══════════════════════════════════════════════════════════════
+
 
 def run_train(data_path: str | None = None):
     """Full training pipeline: load → preprocess → train → evaluate → save."""
@@ -85,13 +94,17 @@ def run_train(data_path: str | None = None):
 
     # ── 3. Train/test split ────────────────────────────────────
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42,
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
     )
     print(f"  Train: {len(X_train):,} rows  |  Test: {len(X_test):,} rows")
 
     # ── 4. Train all base models ───────────────────────────────
     pipelines, cv_results = train_and_compare(
-        X_train, y_train,
+        X_train,
+        y_train,
         categorical_features=cat_features,
         numeric_features=num_features,
         cv_folds=5,
@@ -99,7 +112,7 @@ def run_train(data_path: str | None = None):
 
     # ── 5. Get best model & Tune ───────────────────────────────
     best_name, best_pipe = get_best_model(pipelines, cv_results)
-    
+
     print("\n" + "=" * 60)
     print("  HYPERPARAMETER TUNING")
     print("=" * 60)
@@ -108,7 +121,7 @@ def run_train(data_path: str | None = None):
 
     # ── 6. Evaluate on test set ────────────────────────────────
     test_results = evaluate_on_test(pipelines, X_test, y_test)
-    
+
     # Since we tuned the best model, make sure we use it moving forward
     best_pipe = pipelines[best_name]
 
@@ -122,7 +135,7 @@ def run_train(data_path: str | None = None):
     import json
     from datetime import datetime, timezone
     from src.models import DEFAULT_RANDOM_STATE
-    
+
     metadata = {
         "metadata_version": 1,
         "model_version": datetime.utcnow().strftime("%Y.%m.%d"),
@@ -133,20 +146,20 @@ def run_train(data_path: str | None = None):
         "training_ranges": {
             "age": {
                 "min": float(X_train["age"].min()),
-                "max": float(X_train["age"].max())
+                "max": float(X_train["age"].max()),
             },
             "kms_driven": {
                 "min": float(X_train["kms_driven"].min()),
-                "max": float(X_train["kms_driven"].max())
+                "max": float(X_train["kms_driven"].max()),
             },
             "power": {
                 "min": float(X_train["power"].min()),
-                "max": float(X_train["power"].max())
-            }
+                "max": float(X_train["power"].max()),
+            },
         },
-        "known_brands": sorted(X_train["brand"].unique().tolist())
+        "known_brands": sorted(X_train["brand"].unique().tolist()),
     }
-    
+
     os.makedirs(MODELS_DIR, exist_ok=True)
     metadata_path = MODELS_DIR / "best_model.metadata.json"
     with open(metadata_path, "w", encoding="utf-8") as f:
@@ -164,15 +177,47 @@ def run_train(data_path: str | None = None):
     print("\n" + "=" * 60)
     print("  SAMPLE PREDICTIONS")
     print("=" * 60)
-    samples = pd.DataFrame([
-        {"brand": "Royal Enfield", "owner": "First Owner", "kms_driven": 15000, "age": 3, "power": 350, "owner_rank": 1},
-        {"brand": "Bajaj", "owner": "Second Owner", "kms_driven": 40000, "age": 7, "power": 200, "owner_rank": 2},
-        {"brand": "Honda", "owner": "First Owner", "kms_driven": 5000, "age": 2, "power": 125, "owner_rank": 1},
-        {"brand": "KTM", "owner": "First Owner", "kms_driven": 10000, "age": 4, "power": 390, "owner_rank": 1},
-    ])
+    samples = pd.DataFrame(
+        [
+            {
+                "brand": "Royal Enfield",
+                "owner": "First Owner",
+                "kms_driven": 15000,
+                "age": 3,
+                "power": 350,
+                "owner_rank": 1,
+            },
+            {
+                "brand": "Bajaj",
+                "owner": "Second Owner",
+                "kms_driven": 40000,
+                "age": 7,
+                "power": 200,
+                "owner_rank": 2,
+            },
+            {
+                "brand": "Honda",
+                "owner": "First Owner",
+                "kms_driven": 5000,
+                "age": 2,
+                "power": 125,
+                "owner_rank": 1,
+            },
+            {
+                "brand": "KTM",
+                "owner": "First Owner",
+                "kms_driven": 10000,
+                "age": 4,
+                "power": 390,
+                "owner_rank": 1,
+            },
+        ]
+    )
     preds = best_pipe.predict(samples)
     for row, price in zip(samples.to_dict(orient="records"), preds):
-        print(f"  {row['brand']:15s} {row['power']}cc, {row['kms_driven']:,}km, {row['age']}yr, {row['owner']}")
+        print(
+            f"  {row['brand']:15s} {row['power']}cc, {row['kms_driven']:,}km, {row['age']}yr, {row['owner']}"
+        )
         print(f"    → Predicted: ₹{price:,.0f}")
 
     print("\n" + "█" * 60)
@@ -183,6 +228,7 @@ def run_train(data_path: str | None = None):
 # ═══════════════════════════════════════════════════════════════
 #  PREDICT MODE
 # ═══════════════════════════════════════════════════════════════
+
 
 def run_predict():
     """Interactive prediction using saved model."""
@@ -207,17 +253,23 @@ def run_predict():
             power = float(input("  Engine power (cc): ").strip())
             kms = float(input("  Kilometers driven: ").strip())
             age = float(input("  Age (years): ").strip())
-            owner_num = int(input(f"  Owner number ({OWNER_RANK_MIN}-{OWNER_RANK_MAX}): ").strip())
+            owner_num = int(
+                input(f"  Owner number ({OWNER_RANK_MIN}-{OWNER_RANK_MAX}): ").strip()
+            )
             owner = OWNER_RANK_TO_LABEL.get(owner_num, "First Owner")
 
-            sample = pd.DataFrame([{
-                "brand": brand,
-                "owner": owner,
-                "kms_driven": kms,
-                "age": age,
-                "power": power,
-                "owner_rank": owner_num,
-            }])
+            sample = pd.DataFrame(
+                [
+                    {
+                        "brand": brand,
+                        "owner": owner,
+                        "kms_driven": kms,
+                        "age": age,
+                        "power": power,
+                        "owner_rank": owner_num,
+                    }
+                ]
+            )
 
             pred = pipe.predict(sample)[0]
             print(f"\n  💰 Estimated Price: ₹{pred:,.0f}\n")

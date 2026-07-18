@@ -6,10 +6,12 @@ from src.feature_engineering import DERIVED_NUMERIC_FEATURES, add_derived_featur
 
 
 def test_add_derived_features_generates_expected_columns_and_handles_zero_age():
-    df = pd.DataFrame([
-        {"kms_driven": 10000, "age": 5, "power": 200},
-        {"kms_driven": 5000, "age": 0, "power": 150},
-    ])
+    df = pd.DataFrame(
+        [
+            {"kms_driven": 10000, "age": 5, "power": 200},
+            {"kms_driven": 5000, "age": 0, "power": 150},
+        ]
+    )
 
     out = add_derived_features(df)
 

@@ -3,6 +3,7 @@
 These constants keep field names, accepted ranges, and owner mappings
 consistent across preprocessing, API validation, and CLI inference.
 """
+
 from __future__ import annotations
 
 from typing import Dict, Tuple

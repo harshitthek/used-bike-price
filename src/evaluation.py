@@ -1,14 +1,16 @@
 """Evaluate models and generate plots."""
+
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -44,15 +46,19 @@ def evaluate_on_test(
         mask = y_test > 0
         mape = np.mean(np.abs((y_test[mask] - preds[mask]) / y_test[mask])) * 100
 
-        results.append({
-            "model": name,
-            "r2": round(r2, 4),
-            "mae": round(mae, 2),
-            "rmse": round(rmse, 2),
-            "mape": round(mape, 2),
-        })
+        results.append(
+            {
+                "model": name,
+                "r2": round(r2, 4),
+                "mae": round(mae, 2),
+                "rmse": round(rmse, 2),
+                "mape": round(mape, 2),
+            }
+        )
 
-        print(f"  {name:25s}  R²={r2:.4f}  MAE=₹{mae:>8,.0f}  RMSE=₹{rmse:>8,.0f}  MAPE={mape:.1f}%")
+        print(
+            f"  {name:25s}  R²={r2:.4f}  MAE=₹{mae:>8,.0f}  RMSE=₹{rmse:>8,.0f}  MAPE={mape:.1f}%"
+        )
 
     test_results = pd.DataFrame(results).sort_values("r2", ascending=False)
 
@@ -77,10 +83,24 @@ def plot_model_comparison(
     merged = merged.sort_values("r2", ascending=True)
 
     y_pos = range(len(merged))
-    axes[0].barh(y_pos, merged["cv_mean_r2"], height=0.35, label="CV R²",
-                 color=sns.color_palette("coolwarm", len(merged)), alpha=0.7, align="edge")
-    axes[0].barh([y + 0.35 for y in y_pos], merged["r2"], height=0.35, label="Test R²",
-                 color=sns.color_palette("mako", len(merged)), alpha=0.9, align="edge")
+    axes[0].barh(
+        y_pos,
+        merged["cv_mean_r2"],
+        height=0.35,
+        label="CV R²",
+        color=sns.color_palette("coolwarm", len(merged)),
+        alpha=0.7,
+        align="edge",
+    )
+    axes[0].barh(
+        [y + 0.35 for y in y_pos],
+        merged["r2"],
+        height=0.35,
+        label="Test R²",
+        color=sns.color_palette("mako", len(merged)),
+        alpha=0.9,
+        align="edge",
+    )
     axes[0].set_yticks([y + 0.175 for y in y_pos])
     axes[0].set_yticklabels(merged["model"])
     axes[0].set_xlabel("R² Score")
@@ -94,7 +114,9 @@ def plot_model_comparison(
     axes[1].set_xlabel("Mean Absolute Error (₹)")
     axes[1].set_title("Model Comparison — MAE", fontweight="bold")
     for i, (_, row) in enumerate(merged_mae.iterrows()):
-        axes[1].text(row["mae"] + 200, i, f"₹{row['mae']:,.0f}", va="center", fontsize=9)
+        axes[1].text(
+            row["mae"] + 200, i, f"₹{row['mae']:,.0f}", va="center", fontsize=9
+        )
 
     plt.tight_layout()
     path = str(OUTPUTS_DIR / "model_comparison.png")
@@ -177,10 +199,14 @@ def plot_feature_importance(
         if weighted_importances:
             total_weight = sum(weighted_values)
             norm_weights = [w / total_weight for w in weighted_values]
-            importances = np.average(np.vstack(weighted_importances), axis=0, weights=norm_weights)
+            importances = np.average(
+                np.vstack(weighted_importances), axis=0, weights=norm_weights
+            )
 
     if importances is None:
-        print(f"  Skipping feature importance ({model_name} has no feature_importances_)")
+        print(
+            f"  Skipping feature importance ({model_name} has no feature_importances_)"
+        )
         return ""
 
     preprocessor = pipe.named_steps["preprocessor"]

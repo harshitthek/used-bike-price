@@ -1,9 +1,9 @@
 """Clean and engineer features from the raw Used Bikes dataset."""
+
 from __future__ import annotations
 
 from typing import List, Tuple
 
-import numpy as np
 import pandas as pd
 
 from src.contracts import OWNER_LABEL_TO_RANK
@@ -98,13 +98,18 @@ def preprocess(df: pd.DataFrame, *, verbose: bool = True) -> pd.DataFrame:
         df["owner_rank"] = df["owner"].map(OWNER_LABEL_TO_RANK).fillna(3).astype(int)
 
     # ── 10. Select final columns ───────────────────────────────
-    keep = [c for c in (CATEGORICAL_FEATURES + NUMERIC_FEATURES + ["owner_rank", TARGET])
-            if c in df.columns]
+    keep = [
+        c
+        for c in (CATEGORICAL_FEATURES + NUMERIC_FEATURES + ["owner_rank", TARGET])
+        if c in df.columns
+    ]
     df = df[keep].reset_index(drop=True)
 
     if verbose:
-        print(f"[preprocessing] Done — {len(df):,} clean rows, "
-              f"columns: {list(df.columns)}")
+        print(
+            f"[preprocessing] Done — {len(df):,} clean rows, "
+            f"columns: {list(df.columns)}"
+        )
 
     return df
 
@@ -128,8 +133,11 @@ def get_feature_target_split(
 
 # ── helpers ─────────────────────────────────────────────────────
 
+
 def _remove_iqr_outliers(
-    df: pd.DataFrame, col: str, factor: float = 1.5,
+    df: pd.DataFrame,
+    col: str,
+    factor: float = 1.5,
 ) -> pd.DataFrame:
     """Remove rows where *col* is outside Q1 − factor*IQR .. Q3 + factor*IQR."""
     q1 = df[col].quantile(0.25)

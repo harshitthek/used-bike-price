@@ -1,15 +1,21 @@
 """Load and validate the Used Bikes dataset."""
+
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pandas as pd
 
 # Expected schema from the Kaggle / Droom dataset
 EXPECTED_COLUMNS = {
-    "bike_name", "price", "city", "kms_driven",
-    "owner", "age", "power", "brand",
+    "bike_name",
+    "price",
+    "city",
+    "kms_driven",
+    "owner",
+    "age",
+    "power",
+    "brand",
 }
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -53,8 +59,10 @@ def load_data(path: str | Path | None = None) -> pd.DataFrame:
 
     missing = EXPECTED_COLUMNS - actual_cols
     if missing:
-        print(f"[data_loader] WARNING — missing columns: {missing}. "
-              "Some preprocessing steps may be skipped.")
+        print(
+            f"[data_loader] WARNING — missing columns: {missing}. "
+            "Some preprocessing steps may be skipped."
+        )
 
     print(f"[data_loader] Loaded {len(df):,} rows × {len(df.columns)} columns")
     return df
@@ -94,16 +102,22 @@ def describe_data(df: pd.DataFrame) -> None:
     if "brand" in df.columns:
         n_brands = df["brand"].nunique()
         top3 = df["brand"].value_counts().head(3)
-        print(f"  Brands : {n_brands} unique — top 3: "
-              + ", ".join(f"{b} ({c:,})" for b, c in top3.items()))
+        print(
+            f"  Brands : {n_brands} unique — top 3: "
+            + ", ".join(f"{b} ({c:,})" for b, c in top3.items())
+        )
 
     if "price" in df.columns:
-        print(f"  Price  : ₹{df['price'].min():,.0f} – ₹{df['price'].max():,.0f}  "
-              f"(mean ₹{df['price'].mean():,.0f})")
+        print(
+            f"  Price  : ₹{df['price'].min():,.0f} – ₹{df['price'].max():,.0f}  "
+            f"(mean ₹{df['price'].mean():,.0f})"
+        )
 
     if "kms_driven" in df.columns:
-        print(f"  KMs    : {df['kms_driven'].min():,.0f} – "
-              f"{df['kms_driven'].max():,.0f} km")
+        print(
+            f"  KMs    : {df['kms_driven'].min():,.0f} – "
+            f"{df['kms_driven'].max():,.0f} km"
+        )
 
     nulls = df.isnull().sum()
     if nulls.any():

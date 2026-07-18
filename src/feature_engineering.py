@@ -3,6 +3,7 @@
 These features are generated inside the sklearn pipeline so training and
 inference both apply the exact same transformations.
 """
+
 from __future__ import annotations
 
 from typing import Iterable
@@ -32,7 +33,9 @@ def add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
     # Prevent division-by-zero while preserving behavior for brand-new bikes.
-    age_safe = np.where(out["age"].to_numpy(dtype=float) > 0, out["age"].to_numpy(dtype=float), 1.0)
+    age_safe = np.where(
+        out["age"].to_numpy(dtype=float) > 0, out["age"].to_numpy(dtype=float), 1.0
+    )
     kms = out["kms_driven"].to_numpy(dtype=float)
     power = out["power"].to_numpy(dtype=float)
 

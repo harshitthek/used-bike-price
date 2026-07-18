@@ -1,16 +1,6 @@
 import re
 from pathlib import Path
 
-from src.contracts import (
-    AGE_MAX,
-    AGE_MIN,
-    KMS_MAX,
-    KMS_MIN,
-    OWNER_RANK_MAX,
-    OWNER_RANK_MIN,
-    POWER_MAX,
-    POWER_MIN,
-)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
