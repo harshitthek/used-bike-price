@@ -250,7 +250,7 @@ function App() {
                           </label>
                           <span className="text-sm font-bold text-white">{formData.power} <span className="text-zinc-500 font-normal text-xs">cc</span></span>
                         </div>
-                        <div className="custom-slider pt-2 pb-1">
+                      <div className="pt-2 pb-1">
                           <Slider 
                             value={[formData.power]} 
                             min={contract.schema.properties.power.minimum} 
@@ -268,7 +268,7 @@ function App() {
                           </label>
                           <span className="text-sm font-bold text-white">{formData.age} <span className="text-zinc-500 font-normal text-xs">yrs</span></span>
                         </div>
-                        <div className="custom-slider pt-2 pb-1">
+                      <div className="pt-2 pb-1">
                           <Slider 
                             value={[formData.age]} 
                             min={contract.schema.properties.age.minimum} 
@@ -288,7 +288,7 @@ function App() {
                         </label>
                         <span className="text-sm font-bold text-white">{formData.kms_driven.toLocaleString('en-IN')} <span className="text-zinc-500 font-normal text-xs">km</span></span>
                       </div>
-                      <div className="custom-slider pt-2 pb-1">
+                      <div className="pt-2 pb-1">
                         <Slider 
                           value={[formData.kms_driven]} 
                           min={contract.schema.properties.kms_driven.minimum} 
