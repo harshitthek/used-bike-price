@@ -67,21 +67,26 @@ def test_contract_endpoint_exposes_expected_bounds():
     assert response.status_code == 200
     assert payload["features"] == list(PREDICTION_FEATURES)
     assert payload["derived_features"] == DERIVED_NUMERIC_FEATURES
-    assert payload["bounds"]["power"]["min"] == POWER_MIN
-    assert payload["bounds"]["power"]["max"] == POWER_MAX
-    assert payload["bounds"]["kms_driven"]["min"] == KMS_MIN
-    assert payload["bounds"]["kms_driven"]["max"] == KMS_MAX
-    assert payload["bounds"]["age"]["min"] == AGE_MIN
-    assert payload["bounds"]["age"]["max"] == AGE_MAX
-    assert payload["bounds"]["owner_rank"]["min"] == OWNER_RANK_MIN
-    assert payload["bounds"]["owner_rank"]["max"] == OWNER_RANK_MAX
-    assert payload["owner_rank_labels"] == {str(k): v for k, v in OWNER_RANK_TO_LABEL.items()}
+    
+    schema = payload["schema"]
+    assert "properties" in schema
+    props = schema["properties"]
+    
+    assert props["power"]["minimum"] == POWER_MIN
+    assert props["power"]["maximum"] == POWER_MAX
+    assert props["kms_driven"]["minimum"] == KMS_MIN
+    assert props["kms_driven"]["maximum"] == KMS_MAX
+    assert props["age"]["minimum"] == AGE_MIN
+    assert props["age"]["maximum"] == AGE_MAX
+    assert props["owner_rank"]["minimum"] == OWNER_RANK_MIN
+    assert props["owner_rank"]["maximum"] == OWNER_RANK_MAX
+    assert payload["ui"]["owner_rank_labels"] == {str(k): v for k, v in OWNER_RANK_TO_LABEL.items()}
 
 
 def test_readiness_reports_not_ready(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", None)
     monkeypatch.setattr(api_module, "model_load_error", "Model not found")
-    monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
+    monkeypatch.setattr(api_module, "_load_artifacts", lambda: None)
 
     response = client.get("/health")
     assert response.status_code == 200
@@ -92,7 +97,7 @@ def test_readiness_reports_not_ready(monkeypatch):
 def test_readiness_reports_ready(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", DummyModel())
     monkeypatch.setattr(api_module, "model_load_error", None)
-    monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
+    monkeypatch.setattr(api_module, "_load_artifacts", lambda: None)
 
     response = client.get("/ready")
     assert response.status_code == 200
@@ -157,11 +162,13 @@ def test_predict_success_returns_estimate(monkeypatch):
     payload = response.json()
     assert payload["estimated_price"] == 78654.0
     assert payload["currency"] == "INR"
+    assert "prediction_quality" in payload
+    assert "warnings" in payload
 
 
 def test_predict_returns_503_when_model_missing(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", None)
-    monkeypatch.setattr(api_module, "load_artifacts", lambda: None)
+    monkeypatch.setattr(api_module, "_load_artifacts", lambda: None)
 
     response = client.post(
         "/predict",
@@ -194,7 +201,9 @@ def test_predict_accepts_minimum_boundary_values(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["estimated_price"] == 45000.0
+    payload = response.json()
+    assert payload["estimated_price"] == 45000.0
+    assert "prediction_quality" in payload
 
 
 def test_predict_applies_minimum_price_floor(monkeypatch):
@@ -213,7 +222,9 @@ def test_predict_applies_minimum_price_floor(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["estimated_price"] == 1000.0
+    payload = response.json()
+    assert payload["estimated_price"] == 1000.0
+    assert "prediction_quality" in payload
 
 
 def test_predict_returns_500_on_model_exception(monkeypatch):
@@ -233,3 +244,115 @@ def test_predict_returns_500_on_model_exception(monkeypatch):
 
     assert response.status_code == 500
     assert "internal model error" in response.text
+
+def test_predict_no_adjustment(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(78654.0))
+    # Mock metadata with ranges
+    mock_metadata = {
+        "training_ranges": {
+            "age": {"min": 0, "max": 20},
+            "kms_driven": {"min": 0, "max": 100000},
+            "power": {"min": 100, "max": 500}
+        },
+        "known_brands": ["Honda", "Bajaj"]
+    }
+    monkeypatch.setattr(api_module, "model_metadata", mock_metadata)
+
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "brand": "Honda",
+            "power": 150,
+            "kms_driven": 10000,
+            "age": 5,
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["adjustments"] == []
+    assert payload["warnings"] == []
+
+
+def test_predict_lower_bound_adjustment(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(78654.0))
+    mock_metadata = {
+        "training_ranges": {
+            "age": {"min": 1, "max": 20}
+        }
+    }
+    monkeypatch.setattr(api_module, "model_metadata", mock_metadata)
+
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "brand": "Honda",
+            "power": 150,
+            "kms_driven": 10000,
+            "age": 0.5, # Below min
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["adjustments"]) == 1
+    adj = payload["adjustments"][0]
+    assert adj["feature"] == "age"
+    assert adj["original"] == 0.5
+    assert adj["adjusted"] == 1.0
+
+
+def test_predict_multiple_adjustments(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(78654.0))
+    mock_metadata = {
+        "training_ranges": {
+            "age": {"min": 1, "max": 20},
+            "kms_driven": {"min": 0, "max": 100000},
+        }
+    }
+    monkeypatch.setattr(api_module, "model_metadata", mock_metadata)
+
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "brand": "Honda",
+            "power": 150,
+            "kms_driven": 150000, # Exceeds max
+            "age": 45, # Exceeds max
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["adjustments"]) == 2
+    features_adjusted = {adj["feature"] for adj in payload["adjustments"]}
+    assert features_adjusted == {"age", "kms_driven"}
+    assert "Prediction reliability is reduced" in payload["warnings"][0]
+
+
+def test_predict_unknown_categorical(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(78654.0))
+    mock_metadata = {
+        "known_brands": ["Honda", "Bajaj"]
+    }
+    monkeypatch.setattr(api_module, "model_metadata", mock_metadata)
+
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "brand": "Ducati", # Unknown brand
+            "power": 150,
+            "kms_driven": 10000,
+            "age": 5,
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["adjustments"]) == 0 # No numeric adjustment
+    assert payload["prediction_quality"]["level"] == "low"
+    assert "Ducati" in payload["warnings"][1]

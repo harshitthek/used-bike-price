@@ -118,15 +118,49 @@ def run_train(data_path: str | None = None):
     plot_residuals(best_pipe, X_test, y_test, best_name)
     plot_feature_importance(best_pipe, X_train, best_name)
 
-    # ── 8. Save results ────────────────────────────────────────
+    # ── 8. Generate and save runtime metadata ──────────────────
+    import json
+    from datetime import datetime, timezone
+    from src.models import DEFAULT_RANDOM_STATE
+    
+    metadata = {
+        "metadata_version": 1,
+        "model_version": datetime.utcnow().strftime("%Y.%m.%d"),
+        "training_timestamp": datetime.now(timezone.utc).isoformat(),
+        "random_state": DEFAULT_RANDOM_STATE,
+        "training_samples": len(X_train),
+        "target": TARGET,
+        "training_ranges": {
+            "age": {
+                "min": float(X_train["age"].min()),
+                "max": float(X_train["age"].max())
+            },
+            "kms_driven": {
+                "min": float(X_train["kms_driven"].min()),
+                "max": float(X_train["kms_driven"].max())
+            },
+            "power": {
+                "min": float(X_train["power"].min()),
+                "max": float(X_train["power"].max())
+            }
+        },
+        "known_brands": sorted(X_train["brand"].unique().tolist())
+    }
+    
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    metadata_path = MODELS_DIR / "best_model.metadata.json"
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"  Saved runtime metadata: {metadata_path}")
+
+    # ── 9. Save evaluation results ─────────────────────────────
     save_results(test_results, cv_results, best_name)
 
-    # ── 9. Save best model ─────────────────────────────────────
-    os.makedirs(MODELS_DIR, exist_ok=True)
+    # ── 10. Save best model ────────────────────────────────────
     joblib.dump(best_pipe, DEFAULT_MODEL_PATH)
     print(f"  Saved best model: {DEFAULT_MODEL_PATH}")
 
-    # ── 10. Demo predictions ───────────────────────────────────
+    # ── 11. Demo predictions ───────────────────────────────────
     print("\n" + "=" * 60)
     print("  SAMPLE PREDICTIONS")
     print("=" * 60)

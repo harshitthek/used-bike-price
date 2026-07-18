@@ -2,6 +2,7 @@
 import os
 import logging
 import json
+import threading
 from typing import Any, cast
 from pathlib import Path
 
@@ -76,32 +77,10 @@ EVALUATION_RESULTS_PATH = OUTPUTS_DIR / "evaluation_results.json"
 bike_model = None
 model_load_error = None
 model_metadata = None
+_model_lock = threading.Lock()
 
 
-def _load_model_metadata() -> dict | None:
-    if not EVALUATION_RESULTS_PATH.exists():
-        return None
-
-    try:
-        with open(EVALUATION_RESULTS_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        best_model = data.get("best_model")
-        test_results = data.get("test_results") or []
-        best_metrics = None
-        if best_model:
-            best_metrics = next((r for r in test_results if r.get("model") == best_model), None)
-
-        return {
-            "best_model": best_model,
-            "best_metrics": best_metrics,
-            "source": str(EVALUATION_RESULTS_PATH),
-        }
-    except Exception:
-        logger.exception("Failed to parse evaluation results metadata")
-        return None
-
-def load_artifacts():
+def _load_artifacts():
     global bike_model, model_load_error, model_metadata
     model_load_error = None
     model_metadata = None
@@ -115,12 +94,30 @@ def load_artifacts():
     try:
         logger.info("Loading model from %s", DEFAULT_MODEL_PATH)
         bike_model = joblib.load(DEFAULT_MODEL_PATH)
-        model_metadata = _load_model_metadata()
+        
+        metadata_path = DEFAULT_MODEL_PATH.with_suffix(".metadata.json")
+        if metadata_path.exists():
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                model_metadata = json.load(f)
+        else:
+            model_metadata = None
+
         logger.info("Model loaded successfully.")
     except Exception as exc:
         bike_model = None
         model_load_error = f"Failed to load model artifact: {exc}"
         logger.exception("Model load failed")
+
+def get_model():
+    global bike_model
+    if bike_model is not None:
+        return bike_model
+
+    with _model_lock:
+        if bike_model is None:
+            _load_artifacts()
+
+    return bike_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -162,6 +159,111 @@ class BikeFeatures(BaseModel):
 class PredictionResponse(BaseModel):
     estimated_price: float
     currency: str = "INR"
+    prediction_quality: dict = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+    adjustments: list[dict] = Field(default_factory=list)
+
+def prepare_inference_input(features: BikeFeatures, metadata: dict | None) -> tuple[pd.DataFrame, dict, list[str], list[dict]]:
+    warnings = []
+    adjustments = []
+    quality_level = "high"
+    ood_features = []
+
+    owner_str = OWNER_RANK_TO_LABEL.get(features.owner_rank, "First Owner")
+    
+    input_dict = {
+        "brand": features.brand,
+        "owner": owner_str,
+        "kms_driven": features.kms_driven,
+        "age": features.age,
+        "power": features.power,
+        "owner_rank": features.owner_rank,
+    }
+
+    if metadata:
+        ranges = metadata.get("training_ranges", {})
+        
+        # Age
+        age_range = ranges.get("age")
+        if age_range:
+            if input_dict["age"] > age_range["max"]:
+                ood_features.append("age")
+                adjustments.append({
+                    "feature": "age",
+                    "reason": "training_range",
+                    "original": float(input_dict["age"]),
+                    "adjusted": age_range["max"]
+                })
+                input_dict["age"] = age_range["max"]
+            elif input_dict["age"] < age_range["min"]:
+                adjustments.append({
+                    "feature": "age",
+                    "reason": "training_range",
+                    "original": float(input_dict["age"]),
+                    "adjusted": age_range["min"]
+                })
+                input_dict["age"] = age_range["min"]
+
+        # Kms Driven
+        kms_range = ranges.get("kms_driven")
+        if kms_range:
+            if input_dict["kms_driven"] > kms_range["max"]:
+                ood_features.append("kms_driven")
+                adjustments.append({
+                    "feature": "kms_driven",
+                    "reason": "training_range",
+                    "original": float(input_dict["kms_driven"]),
+                    "adjusted": kms_range["max"]
+                })
+                input_dict["kms_driven"] = kms_range["max"]
+            elif input_dict["kms_driven"] < kms_range["min"]:
+                adjustments.append({
+                    "feature": "kms_driven",
+                    "reason": "training_range",
+                    "original": float(input_dict["kms_driven"]),
+                    "adjusted": kms_range["min"]
+                })
+                input_dict["kms_driven"] = kms_range["min"]
+                
+        # Power
+        power_range = ranges.get("power")
+        if power_range:
+            if input_dict["power"] > power_range["max"]:
+                ood_features.append("power")
+                adjustments.append({
+                    "feature": "power",
+                    "reason": "training_range",
+                    "original": float(input_dict["power"]),
+                    "adjusted": power_range["max"]
+                })
+                input_dict["power"] = power_range["max"]
+            elif input_dict["power"] < power_range["min"]:
+                adjustments.append({
+                    "feature": "power",
+                    "reason": "training_range",
+                    "original": float(input_dict["power"]),
+                    "adjusted": power_range["min"]
+                })
+                input_dict["power"] = power_range["min"]
+
+        # Brand
+        known_brands = metadata.get("known_brands", [])
+        if known_brands and input_dict["brand"] not in known_brands:
+            warnings.append(f"Brand '{input_dict['brand']}' was not seen during training.")
+            ood_features.append("brand")
+
+    if ood_features:
+        quality_level = "low"
+        warnings.insert(0, "Prediction reliability is reduced because some inputs lie outside the training distribution.")
+
+    prediction_quality = {
+        "level": quality_level,
+        "ood_features": ood_features
+    }
+    
+    input_df = pd.DataFrame([input_dict])[list(PREDICTION_FEATURES)]
+    
+    return input_df, prediction_quality, warnings, adjustments
 
 @app.get("/")
 @limiter.limit("5/minute")
@@ -192,42 +294,32 @@ def contract_check(request: Request):
     return {
         "features": list(PREDICTION_FEATURES),
         "derived_features": DERIVED_NUMERIC_FEATURES,
-        "bounds": {
-            "power": {"min": POWER_MIN, "max": POWER_MAX},
-            "kms_driven": {"min": KMS_MIN, "max": KMS_MAX},
-            "age": {"min": AGE_MIN, "max": AGE_MAX},
-            "owner_rank": {"min": OWNER_RANK_MIN, "max": OWNER_RANK_MAX},
+        "schema": BikeFeatures.model_json_schema(),
+        "ui": {
+            "owner_rank_labels": OWNER_RANK_TO_LABEL,
         },
-        "owner_rank_labels": OWNER_RANK_TO_LABEL,
     }
 
 @app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 def predict_price(request: Request, features: BikeFeatures):
-    global bike_model
-    if bike_model is None:
-        print("Loading model...")
-        load_artifacts()
+    model = get_model()
         
-    if bike_model is None:
+    if model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. Try restarting the server or training the model.")
 
-    owner_str = OWNER_RANK_TO_LABEL.get(features.owner_rank, "First Owner")
-
-    input_df = pd.DataFrame([{
-        "brand": features.brand,
-        "owner": owner_str,
-        "kms_driven": features.kms_driven,
-        "age": features.age,
-        "power": features.power,
-        "owner_rank": features.owner_rank,
-    }])[list(PREDICTION_FEATURES)]
+    input_df, quality, warnings, adjustments = prepare_inference_input(features, model_metadata)
 
     try:
-        prediction = bike_model.predict(input_df)[0]
+        prediction = model.predict(input_df)[0]
         # Ensure prediction is positive
         price = max(1000.0, float(prediction))
-        return PredictionResponse(estimated_price=round(price, 0))
+        return PredictionResponse(
+            estimated_price=round(price, 0),
+            prediction_quality=quality,
+            warnings=warnings,
+            adjustments=adjustments
+        )
     except Exception:
         logger.exception("Prediction failed")
         raise HTTPException(status_code=500, detail="Prediction failed due to internal model error.")

@@ -21,6 +21,10 @@ except ImportError:
     HAS_XGBOOST = False
 
 
+# ── Configuration ──────────────────────────────────────────────
+DEFAULT_RANDOM_STATE = 42
+
+
 # ── Model registry ─────────────────────────────────────────────
 
 def get_models() -> Dict[str, object]:
@@ -31,18 +35,18 @@ def get_models() -> Dict[str, object]:
         "Lasso": Lasso(alpha=1.0, max_iter=5000),
         "RandomForest": RandomForestRegressor(
             n_estimators=200, max_depth=15, min_samples_leaf=5,
-            random_state=42, n_jobs=-1,
+            random_state=DEFAULT_RANDOM_STATE, n_jobs=-1,
         ),
         "GradientBoosting": GradientBoostingRegressor(
             n_estimators=200, max_depth=5, learning_rate=0.1,
-            min_samples_leaf=5, random_state=42,
+            min_samples_leaf=5, random_state=DEFAULT_RANDOM_STATE,
         ),
     }
 
     if HAS_XGBOOST:
         models["XGBoost"] = XGBRegressor(
             n_estimators=200, max_depth=5, learning_rate=0.1,
-            min_child_weight=5, random_state=42,
+            min_child_weight=5, random_state=DEFAULT_RANDOM_STATE,
             verbosity=0,
         )
 
@@ -55,7 +59,7 @@ def get_models() -> Dict[str, object]:
                     max_depth=3,
                     learning_rate=0.2,
                     min_child_weight=1,
-                    random_state=42,
+                    random_state=DEFAULT_RANDOM_STATE,
                     verbosity=0,
                 ),
             ),
@@ -66,7 +70,7 @@ def get_models() -> Dict[str, object]:
                     max_depth=5,
                     learning_rate=0.1,
                     min_samples_leaf=5,
-                    random_state=42,
+                    random_state=DEFAULT_RANDOM_STATE,
                 ),
             ),
         ], weights=[0.7, 0.3])
@@ -230,7 +234,7 @@ def tune_best_model(
         cv=3,       # 3-fold CV for speed
         scoring="r2",
         n_jobs=-1,
-        random_state=42,
+        random_state=DEFAULT_RANDOM_STATE,
     )
 
     search.fit(X_train, y_train)
