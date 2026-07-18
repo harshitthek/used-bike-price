@@ -358,9 +358,9 @@ def health_check(request: Request):
         "status": status,
         "model_loaded": bike_model is not None,
         "metadata_loaded": model_metadata is not None,
-        "model_version": model_metadata.get("model_version")
-        if model_metadata
-        else None,
+        "model_version": (
+            model_metadata.get("model_version") if model_metadata else None
+        ),
         "model_load_error": model_load_error,
     }
 
