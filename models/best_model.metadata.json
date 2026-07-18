@@ -1,0 +1,37 @@
+{
+  "metadata_version": 1,
+  "model_version": "2026.07.18",
+  "training_timestamp": "2026-07-18T19:14:47.545125+00:00",
+  "random_state": 42,
+  "training_samples": 5605,
+  "target": "price",
+  "training_ranges": {
+    "age": {
+      "min": 1.0,
+      "max": 30.0
+    },
+    "kms_driven": {
+      "min": 1.0,
+      "max": 91311.0
+    },
+    "power": {
+      "min": 100.0,
+      "max": 650.0
+    }
+  },
+  "known_brands": [
+    "Bajaj",
+    "Benelli",
+    "Hero",
+    "Honda",
+    "Hyosung",
+    "Jawa",
+    "KTM",
+    "Kawasaki",
+    "Mahindra",
+    "Royal Enfield",
+    "Suzuki",
+    "TVS",
+    "Yamaha"
+  ]
+}

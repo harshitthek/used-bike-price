@@ -23,6 +23,7 @@ models/
 
 # Keep production model versioned for deployment
 !models/best_model.joblib
+!models/best_model.metadata.json
 
 # OS/editor
 .DS_Store
