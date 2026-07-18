@@ -10,32 +10,27 @@ const BRANDS = [
   "Suzuki", "Triumph", "TVS", "Yamaha"
 ]
 
-const OWNER_OPTIONS = [
-  { value: 1, label: '1st Owner', tag: 'Best value' },
-  { value: 2, label: '2nd Owner', tag: null },
-  { value: 3, label: '3rd Owner', tag: null },
-  { value: 4, label: '4th Owner', tag: null },
-  { value: 5, label: '5th+', tag: 'High depreciation' },
-]
-
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
 const REQUEST_TIMEOUT_MS = 10000
 
-function validateFormData(data) {
-  if (typeof data.brand !== 'string' || data.brand.trim().length < 2) {
-    return 'Brand must contain at least 2 characters.'
+function validateFormData(data, contract) {
+  if (!contract) return null;
+  const p = contract.schema.properties;
+  
+  if (typeof data.brand !== 'string' || data.brand.trim().length < p.brand.minLength) {
+    return `Brand must contain at least ${p.brand.minLength} characters.`
   }
-  if (data.power < 50 || data.power > 2500) {
-    return 'Engine power must be between 50 and 2500 cc.'
+  if (data.power < p.power.minimum || data.power > p.power.maximum) {
+    return `Engine power must be between ${p.power.minimum} and ${p.power.maximum} cc.`
   }
-  if (data.kms_driven < 0 || data.kms_driven > 999999) {
-    return 'Odometer must be between 0 and 999999 km.'
+  if (data.kms_driven < p.kms_driven.minimum || data.kms_driven > p.kms_driven.maximum) {
+    return `Odometer must be between ${p.kms_driven.minimum} and ${p.kms_driven.maximum} km.`
   }
-  if (data.age < 0 || data.age > 50) {
-    return 'Age must be between 0 and 50 years.'
+  if (data.age < p.age.minimum || data.age > p.age.maximum) {
+    return `Age must be between ${p.age.minimum} and ${p.age.maximum} years.`
   }
-  if (data.owner_rank < 1 || data.owner_rank > 5) {
-    return 'Owner rank must be between 1 and 5.'
+  if (data.owner_rank < p.owner_rank.minimum || data.owner_rank > p.owner_rank.maximum) {
+    return `Owner rank must be between ${p.owner_rank.minimum} and ${p.owner_rank.maximum}.`
   }
   return null
 }
@@ -49,6 +44,8 @@ function App() {
     owner_rank: 1
   })
 
+  const [contract, setContract] = useState(null)
+  const [contractError, setContractError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -57,6 +54,16 @@ function App() {
   const mouseY = useMotionValue(0)
   const bgX = useTransform(mouseX, [0, window.innerWidth], [-15, 15])
   const bgY = useTransform(mouseY, [0, window.innerHeight], [-15, 15])
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/contract`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch API contract')
+        return res.json()
+      })
+      .then(data => setContract(data))
+      .catch(err => setContractError(err.message))
+  }, [])
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -80,7 +87,7 @@ function App() {
     setResult(null)
     setError(null)
 
-    const validationError = validateFormData(formData)
+    const validationError = validateFormData(formData, contract)
     if (validationError) {
       setError(validationError)
       setLoading(false)
@@ -93,7 +100,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-api-key': import.meta.env.VITE_API_KEY || "dev_12345"
         },
@@ -127,6 +134,43 @@ function App() {
       clearTimeout(timeoutId)
     }
   }
+
+  if (contractError) {
+    return (
+      <div className="relative min-h-screen grid-pattern flex items-center justify-center p-6">
+        <GlassCard className="max-w-md text-center p-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-xs font-semibold mb-4">
+            <AlertTriangle size={14} />
+            Initialization Failed
+          </div>
+          <p className="text-[var(--color-text-secondary)] mb-4">{contractError}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[var(--color-bg-base)] border border-[var(--color-border-subtle)] rounded-lg text-sm font-medium cursor-pointer">Retry Connection</button>
+        </GlassCard>
+      </div>
+    )
+  }
+
+  if (!contract) {
+    return (
+      <div className="relative min-h-screen grid-pattern flex items-center justify-center p-6">
+         <div className="flex flex-col items-center gap-4">
+           <div className="relative">
+              <div className="h-12 w-12 rounded-full border-2 border-[var(--color-border-subtle)]" />
+              <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-[var(--color-accent)] animate-spin" />
+           </div>
+           <p className="text-sm font-medium text-[var(--color-text-secondary)]">Loading model schema...</p>
+         </div>
+      </div>
+    )
+  }
+
+  const ownerOptions = Object.entries(contract.ui.owner_rank_labels).map(([val, label]) => {
+    const value = parseInt(val, 10);
+    let tag = null;
+    if (value === contract.schema.properties.owner_rank.minimum) tag = 'Best value';
+    if (value === contract.schema.properties.owner_rank.maximum) tag = 'High depreciation';
+    return { value, label, tag };
+  });
 
   return (
     <div className="relative min-h-screen grid-pattern">
@@ -220,7 +264,9 @@ function App() {
                   label="Engine Power"
                   unit="cc"
                   value={formData.power}
-                  min={50} max={2500} step={25}
+                  min={contract.schema.properties.power.minimum} 
+                  max={contract.schema.properties.power.maximum} 
+                  step={25}
                   onChange={(v) => handleChange('power', v)}
                 />
                 <SliderField
@@ -228,7 +274,9 @@ function App() {
                   label="Vehicle Age"
                   unit={formData.age === 1 ? 'year' : 'years'}
                   value={formData.age}
-                  min={0} max={50} step={1}
+                  min={contract.schema.properties.age.minimum} 
+                  max={contract.schema.properties.age.maximum} 
+                  step={1}
                   onChange={(v) => handleChange('age', v)}
                 />
                 <SliderField
@@ -236,7 +284,9 @@ function App() {
                   label="Odometer"
                   unit="km"
                   value={formData.kms_driven}
-                  min={0} max={999999} step={1000}
+                  min={contract.schema.properties.kms_driven.minimum} 
+                  max={contract.schema.properties.kms_driven.maximum} 
+                  step={1000}
                   onChange={(v) => handleChange('kms_driven', v)}
                   formatValue={(v) => v.toLocaleString('en-IN')}
                 />
@@ -248,7 +298,7 @@ function App() {
                   <Users size={16} /> Ownership History
                 </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {OWNER_OPTIONS.map(opt => (
+                  {ownerOptions.map(opt => (
                     <button
                       key={opt.value}
                       type="button"
