@@ -17,7 +17,6 @@ import seaborn as sns
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 
-
 OUTPUTS_DIR = Path(__file__).resolve().parent.parent / "outputs"
 
 

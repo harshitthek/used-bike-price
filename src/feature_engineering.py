@@ -11,7 +11,6 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
-
 DERIVED_NUMERIC_FEATURES: list[str] = [
     "kms_per_year",
     "power_per_year",

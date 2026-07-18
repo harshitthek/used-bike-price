@@ -8,7 +8,6 @@ import pandas as pd
 
 from src.contracts import OWNER_LABEL_TO_RANK
 
-
 # ── Feature lists (after preprocessing) ────────────────────────
 CATEGORICAL_FEATURES: List[str] = ["brand", "owner"]
 NUMERIC_FEATURES: List[str] = ["kms_driven", "age", "power"]
