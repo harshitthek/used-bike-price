@@ -10,60 +10,53 @@
 @theme {
   --font-sans: 'Geist Variable', 'Inter', system-ui, -apple-system, sans-serif;
   
-  --color-canvas: #0a0a0c;
-  --color-surface-1: #121214;
-  --color-surface-2: #1c1c1f;
+  --color-canvas: #000000;
   
-  /* Aurora Colors */
-  --color-white: #ffffff;
-  --color-black: #000000;
-  --color-transparent: transparent;
-  --color-blue-500: #3b82f6;
-  --color-indigo-300: #a5b4fc;
-  --color-blue-300: #93c5fd;
-  --color-violet-200: #ddd6fe;
-  --color-blue-400: #60a5fa;
-
-  --animate-aurora: aurora 60s linear infinite;
-
-  @keyframes aurora {
-    0% { background-position: 50% 50%, 50% 50%; }
-    100% { background-position: 350% 50%, 350% 50%; }
+  /* Cinematic Lighting Colors */
+  --color-spotlight-primary: rgba(255, 255, 255, 0.15);
+  --color-spotlight-secondary: rgba(99, 102, 241, 0.1);
+  
+  --animate-spotlight: spotlight 2s ease-in-out infinite alternate;
+  
+  @keyframes spotlight {
+    0% { opacity: 0.8; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.05); }
   }
 }
 
 /* Base custom styles */
 .gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-accent {
   background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #60a5fa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Linear-style noise texture */
-.noise-bg {
-  position: relative;
-}
-.noise-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.03;
-  pointer-events: none;
-  z-index: 10;
-  mix-blend-mode: overlay;
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
-/* Vercel-style shadow borders */
-.shadow-border {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-.shadow-border-inner {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+.glass-panel-active {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 40px 0 rgba(99, 102, 241, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* Shadcn Colors Overrides - Godly Dark Mode (Zinc/Slate) */
+/* Shadcn Colors Overrides - OLED Black Dark Mode */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -83,35 +76,35 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --radius: 0.75rem;
+  --radius: 1rem;
 }
 
 .dark {
-  /* Deep desaturated background */
-  --background: oklch(0.15 0 0); 
+  /* Pure OLED Black */
+  --background: oklch(0 0 0); 
   --foreground: oklch(0.985 0 0);
   
-  --card: oklch(0.20 0 0);
+  --card: oklch(0 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.20 0 0);
+  --popover: oklch(0 0 0);
   --popover-foreground: oklch(0.985 0 0);
   
-  --primary: oklch(0.6 0.2 260); /* Electric Blue/Indigo */
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0); /* White primary for high contrast */
+  --primary-foreground: oklch(0 0 0);
   
-  --secondary: oklch(0.25 0 0);
+  --secondary: oklch(0.15 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   
-  --muted: oklch(0.25 0 0);
+  --muted: oklch(0.1 0 0);
   --muted-foreground: oklch(0.7 0 0);
   
-  --accent: oklch(0.28 0 0);
+  --accent: oklch(0.15 0 0);
   --accent-foreground: oklch(0.985 0 0);
   
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 8%);
-  --ring: oklch(0.6 0.2 260);
+  --ring: oklch(1 0 0 / 20%);
 }
 
 @layer base {
