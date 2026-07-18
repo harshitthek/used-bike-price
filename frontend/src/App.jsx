@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Zap, ChevronRight, CheckCircle2, AlertTriangle, Gauge, Calendar, Road, Users, Bike, Info } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronRight, CheckCircle2, AlertTriangle, Gauge, Calendar, Road, Users, Bike, Info, ArrowLeft } from 'lucide-react'
 import { NumberTicker } from "@/components/ui/NumberTicker"
-import { GlassCard } from "@/components/ui/GlassCard"
+import { MagicCard } from "@/components/ui/magic-card"
+import { AuroraBackground } from "@/components/ui/aurora-background"
+import { Slider } from "@/components/ui/slider"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 
 const BRANDS = [
   "Bajaj", "Benelli", "Ducati", "Harley-Davidson", "Hero", "Honda",
@@ -46,14 +50,10 @@ function App() {
 
   const [contract, setContract] = useState(null)
   const [contractError, setContractError] = useState(null)
-  const [loading, setLoading] = useState(false)
+  
+  const [view, setView] = useState('form') // 'form', 'loading', 'result', 'error'
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
-
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-  const bgX = useTransform(mouseX, [0, window.innerWidth], [-15, 15])
-  const bgY = useTransform(mouseY, [0, window.innerHeight], [-15, 15])
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/contract`)
@@ -65,15 +65,6 @@ function App() {
       .catch(err => setContractError(err.message))
   }, [])
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      mouseX.set(e.clientX)
-      mouseY.set(e.clientY)
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
-
   const handleChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
@@ -83,14 +74,14 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
+    setView('loading')
     setResult(null)
     setError(null)
 
     const validationError = validateFormData(formData, contract)
     if (validationError) {
       setError(validationError)
-      setLoading(false)
+      setView('error')
       return
     }
 
@@ -119,7 +110,7 @@ function App() {
 
       setTimeout(() => {
         setResult(data)
-        setLoading(false)
+        setView('result')
       }, 1200)
     } catch (err) {
       setTimeout(() => {
@@ -128,7 +119,7 @@ function App() {
         } else {
           setError(err?.message || 'Could not connect to the prediction API.')
         }
-        setLoading(false)
+        setView('error')
       }, 500)
     } finally {
       clearTimeout(timeoutId)
@@ -137,395 +128,357 @@ function App() {
 
   if (contractError) {
     return (
-      <div className="relative min-h-screen grid-pattern flex items-center justify-center p-6">
-        <GlassCard className="max-w-md text-center p-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-xs font-semibold mb-4">
-            <AlertTriangle size={14} />
-            Initialization Failed
-          </div>
-          <p className="text-[var(--color-text-secondary)] mb-4">{contractError}</p>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[var(--color-bg-base)] border border-[var(--color-border-subtle)] rounded-lg text-sm font-medium cursor-pointer">Retry Connection</button>
-        </GlassCard>
-      </div>
+      <AuroraBackground>
+        <div className="z-10 flex flex-col items-center justify-center p-6">
+          <MagicCard className="max-w-md text-center p-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-semibold mb-4">
+              <AlertTriangle size={14} />
+              Initialization Failed
+            </div>
+            <p className="text-zinc-400 mb-6">{contractError}</p>
+            <Button variant="outline" onClick={() => window.location.reload()}>Retry Connection</Button>
+          </MagicCard>
+        </div>
+      </AuroraBackground>
     )
   }
 
   if (!contract) {
     return (
-      <div className="relative min-h-screen grid-pattern flex items-center justify-center p-6">
-         <div className="flex flex-col items-center gap-4">
+      <AuroraBackground>
+         <div className="z-10 flex flex-col items-center gap-4">
            <div className="relative">
-              <div className="h-12 w-12 rounded-full border-2 border-[var(--color-border-subtle)]" />
-              <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-[var(--color-accent)] animate-spin" />
+              <div className="h-12 w-12 rounded-full border-2 border-white/10" />
+              <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
            </div>
-           <p className="text-sm font-medium text-[var(--color-text-secondary)]">Loading model schema...</p>
+           <p className="text-sm font-medium text-zinc-400 tracking-wider uppercase">Loading model schema...</p>
          </div>
-      </div>
+      </AuroraBackground>
     )
   }
 
   const ownerOptions = Object.entries(contract.ui.owner_rank_labels).map(([val, label]) => {
     const value = parseInt(val, 10);
-    let tag = null;
-    if (value === contract.schema.properties.owner_rank.minimum) tag = 'Best value';
-    if (value === contract.schema.properties.owner_rank.maximum) tag = 'High depreciation';
-    return { value, label, tag };
+    return { value, label: value === 1 ? '1st' : value === 2 ? '2nd' : value === 3 ? '3rd' : '4+' };
   });
 
   return (
-    <div className="relative min-h-screen grid-pattern">
-      {/* Floating orbs */}
-      <motion.div className="orb-container" style={{ x: bgX, y: bgY }}>
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="orb orb-3" />
-      </motion.div>
-
+    <AuroraBackground>
       {/* Header */}
-      <header className="relative z-10 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-base)]/60 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="absolute top-0 left-0 right-0 z-50">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-[var(--color-accent)] flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
               <Bike size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">MotoValue</h1>
-              <p className="text-xs text-[var(--color-text-muted)]">AI Price Engine</p>
+              <h1 className="text-xl font-bold tracking-tight text-white">MotoValue</h1>
+              <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">AI Price Engine</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-            <div className="h-2 w-2 rounded-full bg-[var(--color-success)] animate-pulse" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-md">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
             Model Active
           </div>
         </div>
       </header>
 
-      {/* Main */}
-      <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
-        {/* Hero */}
+      {/* Main Content Area */}
+      <main className="relative z-10 w-full max-w-2xl mx-auto px-4 pt-24 pb-12 flex flex-col items-center justify-center min-h-screen">
+        
+        {/* Title */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="text-center mb-10 w-full"
         >
-          <p className="text-sm font-semibold text-[var(--color-accent)] uppercase tracking-widest mb-3">
-            Machine Learning Powered
-          </p>
-          <h2 className="text-5xl md:text-6xl font-black tracking-tight mb-4">
-            Know Your Bike's
-            <br />
-            <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              True Worth
-            </span>
+          <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4 text-white">
+            Valuation <span className="gradient-text">Engine</span>
           </h2>
-          <p className="text-[var(--color-text-secondary)] text-lg max-w-xl mx-auto">
-            Trained on 7,000+ real Indian motorcycle listings. XGBoost model with R² = 0.91 accuracy.
+          <p className="text-zinc-400 text-sm md:text-base max-w-md mx-auto">
+            Powered by a highly tuned XGBoost model. Configure your motorcycle parameters below to predict its market value.
           </p>
         </motion.div>
 
-        {/* Two-column layout */}
-        <div className="grid lg:grid-cols-5 gap-8 items-start">
-
-          {/* Input Panel — 3 cols */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="lg:col-span-3"
-          >
-            <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] backdrop-blur-md p-8 glow-border">
-
-              {/* Brand */}
-              <div className="mb-8">
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 block">Brand</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {BRANDS.map(b => (
-                    <button
-                      key={b}
-                      type="button"
-                      onClick={() => handleChange('brand', b)}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer
-                        ${formData.brand === b
-                          ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-lg shadow-indigo-500/25'
-                          : 'border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                      {b}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sliders */}
-              <div className="grid sm:grid-cols-3 gap-8 mb-8">
-                <SliderField
-                  icon={<Gauge size={16} />}
-                  label="Engine Power"
-                  unit="cc"
-                  value={formData.power}
-                  min={contract.schema.properties.power.minimum} 
-                  max={contract.schema.properties.power.maximum} 
-                  step={25}
-                  onChange={(v) => handleChange('power', v)}
-                />
-                <SliderField
-                  icon={<Calendar size={16} />}
-                  label="Vehicle Age"
-                  unit={formData.age === 1 ? 'year' : 'years'}
-                  value={formData.age}
-                  min={contract.schema.properties.age.minimum} 
-                  max={contract.schema.properties.age.maximum} 
-                  step={1}
-                  onChange={(v) => handleChange('age', v)}
-                />
-                <SliderField
-                  icon={<Road size={16} />}
-                  label="Odometer"
-                  unit="km"
-                  value={formData.kms_driven}
-                  min={contract.schema.properties.kms_driven.minimum} 
-                  max={contract.schema.properties.kms_driven.maximum} 
-                  step={1000}
-                  onChange={(v) => handleChange('kms_driven', v)}
-                  formatValue={(v) => v.toLocaleString('en-IN')}
-                />
-              </div>
-
-              {/* Ownership */}
-              <div className="mb-8">
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
-                  <Users size={16} /> Ownership History
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {ownerOptions.map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => handleChange('owner_rank', opt.value)}
-                      className={`relative px-4 py-3 rounded-xl text-sm font-medium border transition-all duration-200 cursor-pointer
-                        ${formData.owner_rank === opt.value
-                          ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)] text-[var(--color-accent)]'
-                          : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)]'
-                        }`}
-                    >
-                      {opt.label}
-                      {opt.tag && (
-                        <span className={`block text-[10px] mt-0.5 ${formData.owner_rank === opt.value ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'}`}>
-                          {opt.tag}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit */}
-              <motion.button
-                whileHover={{ scale: 1.01, y: -1 }}
-                whileTap={{ scale: 0.99 }}
-                type="submit"
-                disabled={loading}
-                className="glass-submit-btn w-full py-4 rounded-xl text-base font-bold flex items-center justify-center gap-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {loading ? (
-                  <>
-                    <div className="spinner" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    Get Valuation
-                    <ChevronRight size={18} />
-                  </>
-                )}
-              </motion.button>
-            </form>
-          </motion.div>
-
-          {/* Result Panel — 2 cols */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-2 sticky top-24"
-          >
-            <GlassCard className="min-h-[420px] flex flex-col justify-center">
+        {/* Central Wizard Card */}
+        <motion.div 
+          className="w-full relative"
+          layout
+        >
+          <MagicCard className="w-full p-1 shadow-2xl">
+            <div className="bg-zinc-950/80 rounded-xl p-6 md:p-8 backdrop-blur-xl border border-white/5 w-full min-h-[400px] flex flex-col justify-center">
+              
               <AnimatePresence mode="wait">
-                {loading ? (
+                
+                {view === 'form' && (
+                  <motion.form 
+                    key="form"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                    transition={{ duration: 0.3 }}
+                    onSubmit={handleSubmit} 
+                    className="flex flex-col gap-8 w-full"
+                  >
+                    
+                    {/* Brand Select */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                         Brand
+                      </label>
+                      <Select value={formData.brand} onValueChange={(v) => handleChange('brand', v)}>
+                        <SelectTrigger className="w-full h-12 bg-white/5 border-white/10 text-white rounded-xl focus:ring-blue-500">
+                          <SelectValue placeholder="Select a brand" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100 max-h-[300px]">
+                          {BRANDS.map(b => (
+                            <SelectItem key={b} value={b} className="focus:bg-blue-500 focus:text-white cursor-pointer rounded-lg">
+                              {b}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Engine & Age Row */}
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                          <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                            <Gauge size={14}/> Engine
+                          </label>
+                          <span className="text-sm font-bold text-white">{formData.power} <span className="text-zinc-500 font-normal text-xs">cc</span></span>
+                        </div>
+                        <div className="custom-slider pt-2 pb-1">
+                          <Slider 
+                            value={[formData.power]} 
+                            min={contract.schema.properties.power.minimum} 
+                            max={contract.schema.properties.power.maximum} 
+                            step={25}
+                            onValueChange={([v]) => handleChange('power', v)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                          <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                            <Calendar size={14}/> Age
+                          </label>
+                          <span className="text-sm font-bold text-white">{formData.age} <span className="text-zinc-500 font-normal text-xs">yrs</span></span>
+                        </div>
+                        <div className="custom-slider pt-2 pb-1">
+                          <Slider 
+                            value={[formData.age]} 
+                            min={contract.schema.properties.age.minimum} 
+                            max={contract.schema.properties.age.maximum} 
+                            step={1}
+                            onValueChange={([v]) => handleChange('age', v)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Odometer */}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-end">
+                        <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                          <Road size={14}/> Odometer
+                        </label>
+                        <span className="text-sm font-bold text-white">{formData.kms_driven.toLocaleString('en-IN')} <span className="text-zinc-500 font-normal text-xs">km</span></span>
+                      </div>
+                      <div className="custom-slider pt-2 pb-1">
+                        <Slider 
+                          value={[formData.kms_driven]} 
+                          min={contract.schema.properties.kms_driven.minimum} 
+                          max={contract.schema.properties.kms_driven.maximum} 
+                          step={1000}
+                          onValueChange={([v]) => handleChange('kms_driven', v)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Ownership Pills */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                        <Users size={14} /> Owners
+                      </label>
+                      <div className="flex gap-2 w-full p-1 bg-white/5 rounded-xl border border-white/5">
+                        {ownerOptions.map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => handleChange('owner_rank', opt.value)}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-300 cursor-pointer
+                              ${formData.owner_rank === opt.value
+                                ? 'bg-blue-500 text-white shadow-lg'
+                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                              }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="pt-4">
+                      <Button 
+                        type="submit" 
+                        className="w-full h-14 rounded-xl bg-white text-black hover:bg-zinc-200 text-base font-bold transition-transform active:scale-95 group relative overflow-hidden"
+                      >
+                        <span className="relative z-10 flex items-center gap-2">
+                          Analyze Value <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        </span>
+                      </Button>
+                    </div>
+
+                  </motion.form>
+                )}
+
+                {view === 'loading' && (
                   <motion.div
                     key="loading"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col items-center gap-6"
+                    className="flex flex-col items-center justify-center h-full gap-6 py-12"
                   >
                     <div className="relative">
-                      <div className="h-16 w-16 rounded-full border-2 border-[var(--color-border-subtle)]" />
-                      <div className="absolute inset-0 h-16 w-16 rounded-full border-2 border-transparent border-t-[var(--color-accent)] animate-spin" />
+                      <div className="h-20 w-20 rounded-full border-2 border-white/10" />
+                      <div className="absolute inset-0 h-20 w-20 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Zap className="text-blue-500 animate-pulse" size={24} />
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium text-[var(--color-text-secondary)]">Running inference...</p>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-1">XGBoost model evaluating</p>
+                    <div className="text-center space-y-2">
+                      <p className="text-lg font-bold text-white tracking-wide">Processing Data</p>
+                      <p className="text-sm text-zinc-400">Running XGBoost inference...</p>
                     </div>
                   </motion.div>
+                )}
 
-                ) : result ? (
+                {view === 'result' && result && (
                   <motion.div
                     key="result"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                    className="text-center"
+                    className="flex flex-col items-center text-center py-4 w-full"
                   >
+                    {/* Quality Badge */}
                     {result.prediction_quality?.level === 'low' ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 text-[var(--color-warning)] text-xs font-semibold mb-6 warning-pulse-border">
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-bold uppercase tracking-wider mb-8 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]">
                         <AlertTriangle size={14} />
-                        Low Confidence (Out of Range)
+                        Low Confidence
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-[var(--color-success)] text-xs font-semibold mb-6">
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-8 shadow-[0_0_15px_rgba(52,211,153,0.1)]">
                         <CheckCircle2 size={14} />
-                        High Confidence Valuation
+                        High Confidence
                       </div>
                     )}
 
-                    <p className="text-sm text-[var(--color-text-muted)] mb-2 uppercase tracking-widest font-medium">Estimated Market Value</p>
+                    <p className="text-xs text-zinc-500 mb-3 uppercase tracking-[0.2em] font-bold">Estimated Market Value</p>
 
-                    <div className="price-reveal">
-                      <p className="text-6xl flex items-center justify-center gap-1 font-black tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-1">
-                        <span>₹</span>
+                    <div className="mb-8">
+                      <h3 className="text-6xl md:text-7xl flex items-center justify-center font-black tracking-tighter gradient-text drop-shadow-2xl">
+                        <span className="text-4xl md:text-5xl mr-1 text-white/50">₹</span>
                         <NumberTicker value={result.estimated_price} />
-                      </p>
+                      </h3>
                     </div>
                     
+                    {/* OOD Adjustments Alert */}
                     {result.adjustments && result.adjustments.length > 0 && (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 }}
-                        className="mt-6 p-4 rounded-xl bg-[var(--color-warning)]/5 border border-[var(--color-warning)]/20 text-left"
+                        transition={{ delay: 0.4 }}
+                        className="w-full mb-8 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-left backdrop-blur-sm"
                       >
-                        <div className="flex items-center gap-2 text-[var(--color-warning)] text-xs font-bold uppercase tracking-wider mb-2">
+                        <div className="flex items-center gap-2 text-amber-500 text-[10px] font-black uppercase tracking-widest mb-3">
                           <Info size={14} />
                           Data Normalization Applied
                         </div>
-                        <div className="text-xs text-[var(--color-text-secondary)] space-y-1">
+                        <div className="text-xs text-zinc-400 space-y-2">
                           {result.adjustments.map((adj, i) => (
-                            <p key={i}>
-                              <strong className="text-[var(--color-text-primary)] capitalize">{adj.feature.replace('_', ' ')}</strong> was clamped from {adj.original} to {adj.adjusted} to match the training bounds.
-                            </p>
+                            <div key={i} className="flex justify-between items-center border-b border-white/5 pb-1 last:border-0 last:pb-0">
+                              <span className="capitalize text-zinc-300 font-medium">{adj.feature.replace('_', ' ')}</span>
+                              <span>clamped: <span className="line-through opacity-50 mr-1">{adj.original}</span> {adj.adjusted}</span>
+                            </div>
                           ))}
                         </div>
                       </motion.div>
                     )}
 
-                    <div className="mt-8 space-y-3 text-left">
-                      <DetailRow label="Brand" value={formData.brand} />
-                      <DetailRow label="Engine" value={`${formData.power} cc`} />
-                      <DetailRow label="Age" value={`${formData.age} ${formData.age === 1 ? 'year' : 'years'}`} />
-                      <DetailRow label="Odometer" value={`${formData.kms_driven.toLocaleString('en-IN')} km`} />
-                      <DetailRow label="Owner" value={`${formData.owner_rank}${formData.owner_rank === 1 ? 'st' : formData.owner_rank === 2 ? 'nd' : formData.owner_rank === 3 ? 'rd' : 'th'} owner`} />
+                    {/* Summary Chips */}
+                    <div className="flex flex-wrap justify-center gap-2 mb-8">
+                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.brand}</div>
+                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.power}cc</div>
+                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.age}y</div>
+                      <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs font-medium text-zinc-300">{formData.kms_driven.toLocaleString()}km</div>
                     </div>
-                  </motion.div>
 
-                ) : error ? (
+                    <Button 
+                      variant="outline" 
+                      className="w-full rounded-xl h-12 border-white/10 hover:bg-white/10 hover:text-white transition-colors"
+                      onClick={() => setView('form')}
+                    >
+                      <ArrowLeft size={16} className="mr-2" /> Start New Valuation
+                    </Button>
+                  </motion.div>
+                )}
+
+                {view === 'error' && (
                   <motion.div
                     key="error"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-center"
+                    className="flex flex-col items-center justify-center text-center py-12"
                   >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-xs font-semibold mb-4">
-                      <AlertTriangle size={14} />
-                      Connection Error
+                    <div className="h-16 w-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
+                      <AlertTriangle size={28} className="text-red-500" />
                     </div>
-                    <p className="text-sm text-[var(--color-text-secondary)]">{error}</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-2">Make sure the FastAPI server is running on port 8000.</p>
-                  </motion.div>
-
-                ) : (
-                  <motion.div
-                    key="idle"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center"
-                  >
-                    <div className="h-20 w-20 rounded-2xl bg-[var(--color-accent)]/5 border border-[var(--color-border-subtle)] flex items-center justify-center mx-auto mb-6">
-                      <Zap size={32} className="text-[var(--color-accent)] opacity-40" />
-                    </div>
-                    <p className="text-lg font-semibold text-[var(--color-text-secondary)] mb-2">Ready to Predict</p>
-                    <p className="text-sm text-[var(--color-text-muted)] max-w-xs mx-auto">
-                      Configure the motorcycle parameters on the left and hit <strong className="text-[var(--color-text-secondary)]">Get Valuation</strong>.
-                    </p>
+                    <p className="text-lg font-bold text-white mb-2">Request Failed</p>
+                    <p className="text-sm text-zinc-400 max-w-sm mb-8">{error}</p>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-xl border-white/10 hover:bg-white/10 hover:text-white"
+                      onClick={() => setView('form')}
+                    >
+                      Try Again
+                    </Button>
                   </motion.div>
                 )}
+                
               </AnimatePresence>
-            </GlassCard>
-          </motion.div>
-        </div>
-
-        {/* Footer stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          <StatCard label="Model Accuracy" value="91.1%" />
-          <StatCard label="Training Data" value="7,007 bikes" />
-          <StatCard label="Avg Error" value="₹10,213" />
-          <StatCard label="Brands Supported" value="19" />
+            </div>
+          </MagicCard>
         </motion.div>
+
       </main>
-    </div>
+    </AuroraBackground>
   )
 }
 
-/* ─── Sub-components ─── */
-
-function SliderField({ icon, label, unit, value, min, max, step, onChange, formatValue }) {
-  const display = formatValue ? formatValue(value) : value
+function Zap(props) {
   return (
-    <div>
-      <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 flex items-center gap-2">
-        {icon} {label}
-      </label>
-      <div className="text-2xl font-bold text-[var(--color-text-primary)] mb-3">
-        {display} <span className="text-sm font-normal text-[var(--color-text-muted)]">{unit}</span>
-      </div>
-      <input
-        type="range"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] mt-1">
-        <span>{formatValue ? formatValue(min) : min}</span>
-        <span>{formatValue ? formatValue(max) : max}</span>
-      </div>
-    </div>
-  )
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-[var(--color-border-subtle)]">
-      <span className="text-sm text-[var(--color-text-muted)]">{label}</span>
-      <span className="text-sm font-medium text-[var(--color-text-primary)]">{value}</span>
-    </div>
-  )
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] backdrop-blur-sm px-5 py-4">
-      <p className="text-2xl font-bold text-[var(--color-text-primary)]">{value}</p>
-      <p className="text-xs text-[var(--color-text-muted)] mt-1">{label}</p>
-    </div>
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
   )
 }
 
