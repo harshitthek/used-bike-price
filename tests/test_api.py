@@ -43,7 +43,7 @@ def test_health_check_returns_valid():
     response = client.get("/health")
     assert response.status_code == 200
     assert "status" in response.json()
-    assert response.json()["status"] == "ok"
+    assert response.json()["status"] in ["healthy", "degraded"]
 
 
 def test_health_includes_readiness_metadata(monkeypatch):
@@ -54,9 +54,9 @@ def test_health_includes_readiness_metadata(monkeypatch):
     payload = response.json()
 
     assert response.status_code == 200
-    assert "ready" in payload
-    assert "model_path" in payload
-    assert "model_metadata" in payload
+    assert "model_loaded" in payload
+    assert "metadata_loaded" in payload
+    assert "model_version" in payload
     assert payload["model_load_error"] == "Model missing"
 
 
@@ -90,18 +90,21 @@ def test_readiness_reports_not_ready(monkeypatch):
 
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["ready"] is False
+    assert response.json()["status"] == "degraded"
+    assert response.json()["model_loaded"] is False
     assert response.json()["model_load_error"] == "Model not found"
 
 
 def test_readiness_reports_ready(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", DummyModel())
+    monkeypatch.setattr(api_module, "model_metadata", {"model_version": "test"})
     monkeypatch.setattr(api_module, "model_load_error", None)
     monkeypatch.setattr(api_module, "_load_artifacts", lambda: None)
 
-    response = client.get("/ready")
+    response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.json()["status"] == "healthy"
+    assert response.json()["model_loaded"] is True
 
 def test_predict_requires_valid_api_key():
     # Without X-API-Key

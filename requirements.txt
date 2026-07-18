@@ -12,3 +12,7 @@ pytest
 slowapi
 python-dotenv
 httpx
+python-json-logger
+asgi-correlation-id
+ruff
+black

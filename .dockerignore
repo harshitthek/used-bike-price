@@ -5,11 +5,7 @@ __pycache__/
 .gitignore
 .vscode/
 .idea/
-
-# Data and artifacts
-models/
-*.joblib
-*.pkl
+frontend/
 
 # Dev containers and local only files
 .devcontainer/

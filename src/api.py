@@ -8,6 +8,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +18,13 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 
+try:
+    from asgi_correlation_id import CorrelationIdMiddleware
+    HAS_CORRELATION_ID = True
+except ImportError:
+    HAS_CORRELATION_ID = False
+
+from src.logging_config import setup_logging
 from src.contracts import (
     AGE_MAX,
     AGE_MIN,
@@ -131,6 +139,11 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+setup_logging()
+
+if HAS_CORRELATION_ID:
+    app.add_middleware(CorrelationIdMiddleware)
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -273,13 +286,13 @@ def read_root(request: Request):
 @app.get("/health")
 @limiter.limit("30/minute")
 def health_check(request: Request):
+    status = "healthy" if bike_model is not None and model_metadata is not None else "degraded"
     return {
-        "status": "ok",
-        "ready": bike_model is not None,
+        "status": status,
         "model_loaded": bike_model is not None,
-        "model_path": str(DEFAULT_MODEL_PATH),
+        "metadata_loaded": model_metadata is not None,
+        "model_version": model_metadata.get("model_version") if model_metadata else None,
         "model_load_error": model_load_error,
-        "model_metadata": model_metadata,
     }
 
 
@@ -303,6 +316,7 @@ def contract_check(request: Request):
 @app.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 def predict_price(request: Request, features: BikeFeatures):
+    start_time = time.perf_counter()
     model = get_model()
         
     if model is None:
@@ -314,14 +328,35 @@ def predict_price(request: Request, features: BikeFeatures):
         prediction = model.predict(input_df)[0]
         # Ensure prediction is positive
         price = max(1000.0, float(prediction))
+        
+        latency_ms = round((time.perf_counter() - start_time) * 1000)
+        logger.info(
+            "Prediction completed",
+            extra={
+                "event": "prediction_completed",
+                "prediction_quality": quality["level"],
+                "ood_features": quality["ood_features"],
+                "adjustment_count": len(adjustments),
+                "latency_ms": latency_ms
+            }
+        )
+        
         return PredictionResponse(
             estimated_price=round(price, 0),
             prediction_quality=quality,
             warnings=warnings,
             adjustments=adjustments
         )
-    except Exception:
-        logger.exception("Prediction failed")
+    except Exception as exc:
+        latency_ms = round((time.perf_counter() - start_time) * 1000)
+        logger.error(
+            "Prediction failed",
+            exc_info=exc,
+            extra={
+                "event": "prediction_failed",
+                "latency_ms": latency_ms
+            }
+        )
         raise HTTPException(status_code=500, detail="Prediction failed due to internal model error.")
 
 # To run:
