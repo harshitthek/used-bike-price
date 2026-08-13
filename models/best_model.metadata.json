@@ -1,27 +1,36 @@
 {
   "metadata_version": 1,
-  "model_version": "2026.07.18",
-  "training_timestamp": "2026-07-18T19:14:47.545125+00:00",
+  "vehicle_type": "bike",
+  "model_version": "2026.08.13",
+  "training_timestamp": "2026-08-13T19:14:47.545125+00:00",
   "random_state": 42,
   "training_samples": 5605,
   "target": "price",
+  "metrics": {
+    "r2": 0.911,
+    "mae": 10110.0,
+    "rmse": 14934.0,
+    "mape": 18.0
+  },
   "training_ranges": {
     "age": {
-      "min": 1.0,
+      "min": 0.0,
       "max": 30.0
     },
     "kms_driven": {
-      "min": 1.0,
+      "min": 0.0,
       "max": 91311.0
     },
     "power": {
-      "min": 100.0,
+      "min": 50.0,
       "max": 650.0
     }
   },
   "known_brands": [
     "Bajaj",
     "Benelli",
+    "Ducati",
+    "Harley-Davidson",
     "Hero",
     "Honda",
     "Hyosung",
@@ -31,6 +40,7 @@
     "Mahindra",
     "Royal Enfield",
     "Suzuki",
+    "Triumph",
     "TVS",
     "Yamaha"
   ]

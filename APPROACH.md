@@ -341,3 +341,20 @@ To ensure future changes stay stable without relying on manual runs, we added CI
 - Triggered on both push and pull request events targeting `main`.
 
 This gives a consistent quality gate for regression prevention in both backend and frontend paths.
+
+## 21. Phase 16 — Valuation Confidence Intervals & Statistical Bands
+To address the limitation of single-point resale predictions, we introduced statistical confidence intervals:
+
+- The backend calculates an 80% confidence interval band ($\text{Fair Price} \pm 1.28 \times \text{RMSE}$) derived from test set residual standard error.
+- Returned `price_range` payload provides Wholesale Trade-In Low, Fair Market Value, and Dealer Retail High.
+- Added visual gradient range bar and copy-to-clipboard valuation certificate.
+
+## 22. Phase 17 — Dual-Engine Platform Upgrade (Motorcycles & Cars)
+To expand from a two-wheeler estimator into a comprehensive automotive valuation platform (**AutoValuate AI**):
+
+- Ingested authentic Indian car listings ([`data/Used_Cars.csv`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/data/Used_Cars.csv)) covering 6,708 real transactions across 23 brands.
+- Built [`src/train_cars.py`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/src/train_cars.py) and trained an XGBoost regression model reaching **$R^2 = 0.9200$ (92% accuracy)** and $\text{MAE} = ₹74,976$.
+- Upgraded [`src/api.py`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/src/api.py) and [`src/contracts.py`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/src/contracts.py) with dynamic vehicle routing (`vehicle_type: "bike" | "car"`).
+- Upgraded [`frontend/src/App.jsx`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/frontend/src/App.jsx) with a Vehicle Mode Switcher (🏍️ Bikes | 🚗 Cars), 1-click popular presets, and car-specific fuel/transmission controls.
+- Consolidated ADRs and added [`ADR 007: Dual-Engine Vehicle Architecture`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/architecture/adr/007-dual-engine-bike-and-car-architecture.md).
+

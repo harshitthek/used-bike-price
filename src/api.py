@@ -1,23 +1,23 @@
-"""FastAPI backend for Used Bike Price Prediction."""
+"""FastAPI backend for Used Bike & Car Price Prediction (AutoValuate AI)."""
 
-import os
-import logging
 import json
+import logging
+import os
 import threading
-from typing import Any, cast
+import time
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import joblib
 import pandas as pd
-import time
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, Depends, Header
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from dotenv import load_dotenv
+from slowapi.util import get_remote_address
 
 try:
     from asgi_correlation_id import CorrelationIdMiddleware
@@ -26,10 +26,22 @@ try:
 except ImportError:
     HAS_CORRELATION_ID = False
 
-from src.logging_config import setup_logging
 from src.contracts import (
     AGE_MAX,
     AGE_MIN,
+    BIKE_BRANDS,
+    CAR_AGE_MAX,
+    CAR_AGE_MIN,
+    CAR_BHP_MAX,
+    CAR_BHP_MIN,
+    CAR_BRANDS,
+    CAR_ENGINE_MAX,
+    CAR_ENGINE_MIN,
+    CAR_FUEL_TYPES,
+    CAR_KMS_MAX,
+    CAR_KMS_MIN,
+    CAR_PREDICTION_FEATURES,
+    CAR_TRANSMISSION_TYPES,
     KMS_MAX,
     KMS_MIN,
     OWNER_RANK_MAX,
@@ -40,6 +52,7 @@ from src.contracts import (
     PREDICTION_FEATURES,
 )
 from src.feature_engineering import DERIVED_NUMERIC_FEATURES
+from src.logging_config import setup_logging
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -62,14 +75,19 @@ def resolve_allowed_origins() -> list[str]:
     if frontend_url:
         origins.append(frontend_url)
 
-    # If local frontend is used, allow both loopback hostnames to avoid CORS mismatch.
     is_local_dev = any(
         "localhost" in origin or "127.0.0.1" in origin for origin in origins
     )
     if is_local_dev or not origins:
-        origins.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
+        origins.extend([
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5175",
+        ])
 
-    # Preserve order while removing duplicates.
     seen = set()
     unique_origins = []
     for origin in origins:
@@ -82,72 +100,94 @@ def resolve_allowed_origins() -> list[str]:
 
 ALLOWED_ORIGINS = resolve_allowed_origins()
 
-# Ensure project root is on path
+# Project root paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
-DEFAULT_MODEL_PATH = MODELS_DIR / "best_model.joblib"
-OUTPUTS_DIR = PROJECT_ROOT / "outputs"
-EVALUATION_RESULTS_PATH = OUTPUTS_DIR / "evaluation_results.json"
+BIKE_MODEL_PATH = MODELS_DIR / "best_model.joblib"
+CAR_MODEL_PATH = MODELS_DIR / "car_model.joblib"
 
-# Global variables for caching model state
+# Model caching state
 bike_model = None
-model_load_error = None
-model_metadata = None
+bike_metadata = None
+bike_load_error = None
+
+car_model = None
+car_metadata = None
+car_load_error = None
+
 _model_lock = threading.Lock()
 
 
 def _load_artifacts():
-    global bike_model, model_load_error, model_metadata
-    model_load_error = None
-    model_metadata = None
+    global bike_model, bike_metadata, bike_load_error
+    global car_model, car_metadata, car_load_error
 
-    if not DEFAULT_MODEL_PATH.exists():
-        bike_model = None
-        model_load_error = f"Model not found at {DEFAULT_MODEL_PATH}"
-        logger.warning(model_load_error)
-        return
+    # Load Bike Model
+    bike_load_error = None
+    if BIKE_MODEL_PATH.exists():
+        try:
+            bike_model = joblib.load(BIKE_MODEL_PATH)
+            meta_path = BIKE_MODEL_PATH.with_suffix(".metadata.json")
+            if meta_path.exists():
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    bike_metadata = json.load(f)
+            logger.info("Bike model loaded successfully.")
+        except Exception as exc:
+            bike_model = None
+            bike_load_error = f"Failed to load bike model: {exc}"
+            logger.exception("Bike model load failed")
+    else:
+        bike_load_error = f"Bike model not found at {BIKE_MODEL_PATH}"
 
-    try:
-        logger.info("Loading model from %s", DEFAULT_MODEL_PATH)
-        bike_model = joblib.load(DEFAULT_MODEL_PATH)
+    # Load Car Model
+    car_load_error = None
+    if CAR_MODEL_PATH.exists():
+        try:
+            car_model = joblib.load(CAR_MODEL_PATH)
+            meta_path = CAR_MODEL_PATH.with_suffix(".metadata.json")
+            if meta_path.exists():
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    car_metadata = json.load(f)
+            logger.info("Car model loaded successfully.")
+        except Exception as exc:
+            car_model = None
+            car_load_error = f"Failed to load car model: {exc}"
+            logger.exception("Car model load failed")
+    else:
+        car_load_error = f"Car model not found at {CAR_MODEL_PATH}"
 
-        metadata_path = DEFAULT_MODEL_PATH.with_suffix(".metadata.json")
-        if metadata_path.exists():
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                model_metadata = json.load(f)
-        else:
-            model_metadata = None
 
-        logger.info("Model loaded successfully.")
-    except Exception as exc:
-        bike_model = None
-        model_load_error = f"Failed to load model artifact: {exc}"
-        logger.exception("Model load failed")
-
-
-def get_model():
-    global bike_model
-    if bike_model is not None:
-        return bike_model
+def get_model(vehicle_type: str = "bike") -> Tuple[Any, Optional[dict]]:
+    global bike_model, car_model
+    if (vehicle_type == "bike" and bike_model is not None) or (
+        vehicle_type == "car" and car_model is not None
+    ):
+        return (
+            (bike_model, bike_metadata)
+            if vehicle_type == "bike"
+            else (car_model, car_metadata)
+        )
 
     with _model_lock:
-        if bike_model is None:
+        if (vehicle_type == "bike" and bike_model is None) or (
+            vehicle_type == "car" and car_model is None
+        ):
             _load_artifacts()
 
-    return bike_model
+    if vehicle_type == "car":
+        return car_model, car_metadata
+    return bike_model, bike_metadata
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Completely lazy model loading!
-    # Server will bind to port instantly for Render health checks.
     yield
 
 
 app = FastAPI(
-    title="Used Bike Price Predictor API",
-    description="API for estimating the resale value of used motorcycles in India",
-    version="1.0.0",
+    title="AutoValuate AI — Used Vehicle Price Predictor",
+    description="API for estimating the resale value of used motorcycles and cars in India",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -160,7 +200,6 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
 
-# Enable CORS for frontend securely
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -175,7 +214,11 @@ def verify_api_key(x_api_key: str = Header("None")):
         raise HTTPException(status_code=401, detail="Invalid or Missing API Key")
 
 
+# ── REQUEST SCHEMAS ────────────────────────────────────────────────
+
+
 class BikeFeatures(BaseModel):
+    vehicle_type: Literal["bike"] = "bike"
     brand: str = Field(
         ...,
         title="Brand",
@@ -213,117 +256,145 @@ class BikeFeatures(BaseModel):
     )
 
 
+class CarFeatures(BaseModel):
+    vehicle_type: Literal["car"] = "car"
+    brand: str = Field(
+        ...,
+        title="Brand",
+        min_length=2,
+        max_length=50,
+        json_schema_extra={"example": "Maruti"},
+    )
+    fuel: str = Field(
+        default="Petrol",
+        title="Fuel Type",
+        json_schema_extra={"example": "Petrol"},
+    )
+    transmission: str = Field(
+        default="Manual",
+        title="Transmission",
+        json_schema_extra={"example": "Manual"},
+    )
+    engine_cc: float = Field(
+        ...,
+        title="Engine Displacement (cc)",
+        ge=CAR_ENGINE_MIN,
+        le=CAR_ENGINE_MAX,
+        json_schema_extra={"example": 1197},
+    )
+    max_power_bhp: Optional[float] = Field(
+        default=None,
+        title="Max Power (bhp)",
+        ge=CAR_BHP_MIN,
+        le=CAR_BHP_MAX,
+        json_schema_extra={"example": 82.0},
+    )
+    kms_driven: float = Field(
+        ...,
+        title="Kilometers Driven",
+        ge=CAR_KMS_MIN,
+        le=CAR_KMS_MAX,
+        json_schema_extra={"example": 45000},
+    )
+    age: float = Field(
+        ...,
+        title="Age (Years)",
+        ge=CAR_AGE_MIN,
+        le=CAR_AGE_MAX,
+        json_schema_extra={"example": 5},
+    )
+    owner_rank: int = Field(
+        ...,
+        title="Owner Rank (1-5)",
+        ge=OWNER_RANK_MIN,
+        le=OWNER_RANK_MAX,
+        json_schema_extra={"example": 1},
+    )
+
+
+class UniversalVehicleInput(BaseModel):
+    vehicle_type: Literal["bike", "car"] = "bike"
+    brand: str = Field(..., min_length=2, max_length=50)
+    power: Optional[float] = None
+    engine_cc: Optional[float] = None
+    max_power_bhp: Optional[float] = None
+    fuel: Optional[str] = "Petrol"
+    transmission: Optional[str] = "Manual"
+    kms_driven: float = Field(..., ge=0, le=999999)
+    age: float = Field(..., ge=0, le=50)
+    owner_rank: int = Field(..., ge=1, le=5)
+
+
+class PriceRange(BaseModel):
+    min: float
+    max: float
+    confidence_interval: float = 0.80
+
+
 class PredictionResponse(BaseModel):
+    vehicle_type: str = "bike"
     estimated_price: float
     currency: str = "INR"
+    price_range: PriceRange
     prediction_quality: dict = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     adjustments: list[dict] = Field(default_factory=list)
 
 
-def prepare_inference_input(
-    features: BikeFeatures, metadata: dict | None
-) -> tuple[pd.DataFrame, dict, list[str], list[dict]]:
+# ── INFERENCE INPUT PREPARATION ─────────────────────────────────────
+
+
+def prepare_bike_inference(
+    data: UniversalVehicleInput | BikeFeatures, metadata: dict | None
+) -> Tuple[pd.DataFrame, dict, list[str], list[dict]]:
     warnings = []
     adjustments = []
     quality_level = "high"
     ood_features = []
 
-    owner_str = OWNER_RANK_TO_LABEL.get(features.owner_rank, "First Owner")
+    power_val = getattr(data, "power", None) or getattr(data, "engine_cc", 150.0)
+    owner_str = OWNER_RANK_TO_LABEL.get(data.owner_rank, "First Owner")
 
     input_dict = {
-        "brand": features.brand,
+        "brand": data.brand,
         "owner": owner_str,
-        "kms_driven": features.kms_driven,
-        "age": features.age,
-        "power": features.power,
-        "owner_rank": features.owner_rank,
+        "kms_driven": float(data.kms_driven),
+        "age": float(data.age),
+        "power": float(power_val),
+        "owner_rank": int(data.owner_rank),
     }
 
     if metadata:
         ranges = metadata.get("training_ranges", {})
+        for feat in ["age", "kms_driven", "power"]:
+            feat_range = ranges.get(feat)
+            if feat_range:
+                val = float(input_dict[feat])
+                if val > feat_range["max"]:
+                    ood_features.append(feat)
+                    adjustments.append(
+                        {
+                            "feature": feat,
+                            "reason": "training_range",
+                            "original": val,
+                            "adjusted": feat_range["max"],
+                        }
+                    )
+                    input_dict[feat] = feat_range["max"]
+                elif val < feat_range["min"]:
+                    adjustments.append(
+                        {
+                            "feature": feat,
+                            "reason": "training_range",
+                            "original": val,
+                            "adjusted": feat_range["min"],
+                        }
+                    )
+                    input_dict[feat] = feat_range["min"]
 
-        # Age
-        age_range = ranges.get("age")
-        if age_range:
-            if input_dict["age"] > age_range["max"]:
-                ood_features.append("age")
-                adjustments.append(
-                    {
-                        "feature": "age",
-                        "reason": "training_range",
-                        "original": float(input_dict["age"]),
-                        "adjusted": age_range["max"],
-                    }
-                )
-                input_dict["age"] = age_range["max"]
-            elif input_dict["age"] < age_range["min"]:
-                adjustments.append(
-                    {
-                        "feature": "age",
-                        "reason": "training_range",
-                        "original": float(input_dict["age"]),
-                        "adjusted": age_range["min"],
-                    }
-                )
-                input_dict["age"] = age_range["min"]
-
-        # Kms Driven
-        kms_range = ranges.get("kms_driven")
-        if kms_range:
-            if input_dict["kms_driven"] > kms_range["max"]:
-                ood_features.append("kms_driven")
-                adjustments.append(
-                    {
-                        "feature": "kms_driven",
-                        "reason": "training_range",
-                        "original": float(input_dict["kms_driven"]),
-                        "adjusted": kms_range["max"],
-                    }
-                )
-                input_dict["kms_driven"] = kms_range["max"]
-            elif input_dict["kms_driven"] < kms_range["min"]:
-                adjustments.append(
-                    {
-                        "feature": "kms_driven",
-                        "reason": "training_range",
-                        "original": float(input_dict["kms_driven"]),
-                        "adjusted": kms_range["min"],
-                    }
-                )
-                input_dict["kms_driven"] = kms_range["min"]
-
-        # Power
-        power_range = ranges.get("power")
-        if power_range:
-            if input_dict["power"] > power_range["max"]:
-                ood_features.append("power")
-                adjustments.append(
-                    {
-                        "feature": "power",
-                        "reason": "training_range",
-                        "original": float(input_dict["power"]),
-                        "adjusted": power_range["max"],
-                    }
-                )
-                input_dict["power"] = power_range["max"]
-            elif input_dict["power"] < power_range["min"]:
-                adjustments.append(
-                    {
-                        "feature": "power",
-                        "reason": "training_range",
-                        "original": float(input_dict["power"]),
-                        "adjusted": power_range["min"],
-                    }
-                )
-                input_dict["power"] = power_range["min"]
-
-        # Brand
         known_brands = metadata.get("known_brands", [])
         if known_brands and input_dict["brand"] not in known_brands:
-            warnings.append(
-                f"Brand '{input_dict['brand']}' was not seen during training."
-            )
+            warnings.append(f"Brand '{input_dict['brand']}' was not seen during training.")
             ood_features.append("brand")
 
     if ood_features:
@@ -334,34 +405,107 @@ def prepare_inference_input(
         )
 
     prediction_quality = {"level": quality_level, "ood_features": ood_features}
-
     input_df = pd.DataFrame([input_dict])[list(PREDICTION_FEATURES)]
-
     return input_df, prediction_quality, warnings, adjustments
 
 
+def prepare_car_inference(
+    data: UniversalVehicleInput | CarFeatures, metadata: dict | None
+) -> Tuple[pd.DataFrame, dict, list[str], list[dict]]:
+    warnings = []
+    adjustments = []
+    quality_level = "high"
+    ood_features = []
+
+    engine_val = getattr(data, "engine_cc", None) or getattr(data, "power", 1197.0)
+    bhp_val = getattr(data, "max_power_bhp", None)
+    if bhp_val is None:
+        # Default heuristic: ~0.075 bhp per cc + 10 for typical Indian passenger cars
+        bhp_val = round(float(engine_val) * 0.075 + 10.0, 1)
+
+    fuel_val = (getattr(data, "fuel", "Petrol") or "Petrol").capitalize()
+    trans_val = (getattr(data, "transmission", "Manual") or "Manual").capitalize()
+
+    input_dict = {
+        "brand": data.brand,
+        "fuel": fuel_val,
+        "transmission": trans_val,
+        "engine_cc": float(engine_val),
+        "max_power_bhp": float(bhp_val),
+        "age": float(data.age),
+        "kms_driven": float(data.kms_driven),
+        "owner_rank": int(data.owner_rank),
+    }
+
+    if metadata:
+        ranges = metadata.get("training_ranges", {})
+        for feat in ["age", "kms_driven", "engine_cc", "max_power_bhp"]:
+            feat_range = ranges.get(feat)
+            if feat_range:
+                val = float(input_dict[feat])
+                if val > feat_range["max"]:
+                    ood_features.append(feat)
+                    adjustments.append(
+                        {
+                            "feature": feat,
+                            "reason": "training_range",
+                            "original": val,
+                            "adjusted": feat_range["max"],
+                        }
+                    )
+                    input_dict[feat] = feat_range["max"]
+                elif val < feat_range["min"]:
+                    adjustments.append(
+                        {
+                            "feature": feat,
+                            "reason": "training_range",
+                            "original": val,
+                            "adjusted": feat_range["min"],
+                        }
+                    )
+                    input_dict[feat] = feat_range["min"]
+
+        known_brands = metadata.get("known_brands", [])
+        if known_brands and input_dict["brand"] not in known_brands:
+            warnings.append(f"Brand '{input_dict['brand']}' was not seen during training.")
+            ood_features.append("brand")
+
+    if ood_features:
+        quality_level = "low"
+        warnings.insert(
+            0,
+            "Prediction reliability is reduced because some inputs lie outside the training distribution.",
+        )
+
+    prediction_quality = {"level": quality_level, "ood_features": ood_features}
+    input_df = pd.DataFrame([input_dict])[list(CAR_PREDICTION_FEATURES)]
+    return input_df, prediction_quality, warnings, adjustments
+
+
+# ── ENDPOINTS ───────────────────────────────────────────────────────
+
+
 @app.get("/")
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def read_root(request: Request):
-    return {"message": "API running"}
+    return {"message": "AutoValuate AI API running"}
 
 
 @app.get("/health")
 @limiter.limit("30/minute")
 def health_check(request: Request):
-    status = (
-        "healthy"
-        if bike_model is not None and model_metadata is not None
-        else "degraded"
-    )
+    b_mod, b_meta = get_model("bike")
+    c_mod, c_meta = get_model("car")
+
+    status = "healthy" if b_mod is not None and c_mod is not None else "degraded"
     return {
         "status": status,
-        "model_loaded": bike_model is not None,
-        "metadata_loaded": model_metadata is not None,
-        "model_version": (
-            model_metadata.get("model_version") if model_metadata else None
-        ),
-        "model_load_error": model_load_error,
+        "model_loaded": b_mod is not None,
+        "bike_model_loaded": b_mod is not None,
+        "car_model_loaded": c_mod is not None,
+        "metadata_loaded": b_meta is not None,
+        "model_version": b_meta.get("model_version") if b_meta else None,
+        "model_load_error": bike_load_error,
     }
 
 
@@ -372,12 +516,29 @@ def ready():
 
 @app.get("/contract")
 @limiter.limit("30/minute")
-def contract_check(request: Request):
+def contract_check(
+    request: Request, vehicle_type: Literal["bike", "car"] = Query("bike")
+):
+    if vehicle_type == "car":
+        return {
+            "vehicle_type": "car",
+            "features": list(CAR_PREDICTION_FEATURES),
+            "schema": CarFeatures.model_json_schema(),
+            "ui": {
+                "brands": CAR_BRANDS,
+                "fuels": CAR_FUEL_TYPES,
+                "transmissions": CAR_TRANSMISSION_TYPES,
+                "owner_rank_labels": OWNER_RANK_TO_LABEL,
+            },
+        }
+
     return {
+        "vehicle_type": "bike",
         "features": list(PREDICTION_FEATURES),
         "derived_features": DERIVED_NUMERIC_FEATURES,
         "schema": BikeFeatures.model_json_schema(),
         "ui": {
+            "brands": BIKE_BRANDS,
             "owner_rank_labels": OWNER_RANK_TO_LABEL,
         },
     }
@@ -388,31 +549,48 @@ def contract_check(request: Request):
     response_model=PredictionResponse,
     dependencies=[Depends(verify_api_key)],
 )
-@limiter.limit("10/minute")
-def predict_price(request: Request, features: BikeFeatures):
+@limiter.limit("20/minute")
+def predict_price(request: Request, payload: UniversalVehicleInput):
     start_time = time.perf_counter()
-    model = get_model()
+    v_type = payload.vehicle_type
+
+    model, metadata = get_model(v_type)
 
     if model is None:
         raise HTTPException(
             status_code=503,
-            detail="Model is not loaded. Try restarting the server or training the model.",
+            detail=f"{v_type.capitalize()} model is not loaded. Try restarting the server.",
         )
 
-    input_df, quality, warnings, adjustments = prepare_inference_input(
-        features, model_metadata
-    )
+    if v_type == "car":
+        input_df, quality, warnings, adjustments = prepare_car_inference(
+            payload, metadata
+        )
+        default_rmse = 141335.0
+        floor_price = 25000.0
+    else:
+        input_df, quality, warnings, adjustments = prepare_bike_inference(
+            payload, metadata
+        )
+        default_rmse = 14934.0
+        floor_price = 1000.0
 
     try:
-        prediction = model.predict(input_df)[0]
-        # Ensure prediction is positive
-        price = max(1000.0, float(prediction))
+        prediction = float(model.predict(input_df)[0])
+        price = max(floor_price, prediction)
+
+        # Compute price range using residual standard error (80% confidence interval ~ 1.28 * RMSE)
+        rmse = float(metadata.get("metrics", {}).get("rmse", default_rmse)) if metadata else default_rmse
+        margin = 1.28 * rmse
+        lower_bound = max(floor_price, round(price - margin, -2))
+        upper_bound = round(price + margin, -2)
 
         latency_ms = round((time.perf_counter() - start_time) * 1000)
         logger.info(
-            "Prediction completed",
+            f"{v_type.capitalize()} prediction completed",
             extra={
                 "event": "prediction_completed",
+                "vehicle_type": v_type,
                 "prediction_quality": quality["level"],
                 "ood_features": quality["ood_features"],
                 "adjustment_count": len(adjustments),
@@ -421,7 +599,13 @@ def predict_price(request: Request, features: BikeFeatures):
         )
 
         return PredictionResponse(
+            vehicle_type=v_type,
             estimated_price=round(price, 0),
+            price_range=PriceRange(
+                min=lower_bound,
+                max=upper_bound,
+                confidence_interval=0.80,
+            ),
             prediction_quality=quality,
             warnings=warnings,
             adjustments=adjustments,
@@ -429,14 +613,11 @@ def predict_price(request: Request, features: BikeFeatures):
     except Exception as exc:
         latency_ms = round((time.perf_counter() - start_time) * 1000)
         logger.error(
-            "Prediction failed",
+            f"{v_type.capitalize()} prediction failed",
             exc_info=exc,
             extra={"event": "prediction_failed", "latency_ms": latency_ms},
         )
         raise HTTPException(
-            status_code=500, detail="Prediction failed due to internal model error."
+            status_code=500,
+            detail="Prediction failed due to internal model error.",
         )
-
-
-# To run:
-# uvicorn src.api:app --reload
