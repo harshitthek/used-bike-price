@@ -1,24 +1,17 @@
 from fastapi.testclient import TestClient
+
 import src.api as api_module
-from src.api import app, API_KEY
+from src.api import API_KEY, app
 from src.contracts import (
     AGE_MAX,
     AGE_MIN,
-    CAR_AGE_MAX,
-    CAR_AGE_MIN,
     CAR_BRANDS,
-    CAR_ENGINE_MAX,
-    CAR_ENGINE_MIN,
     CAR_FUEL_TYPES,
-    CAR_KMS_MAX,
-    CAR_KMS_MIN,
     CAR_PREDICTION_FEATURES,
     CAR_TRANSMISSION_TYPES,
     KMS_MAX,
     KMS_MIN,
-    OWNER_RANK_MAX,
     OWNER_RANK_MIN,
-    OWNER_RANK_TO_LABEL,
     POWER_MAX,
     POWER_MIN,
     PREDICTION_FEATURES,
@@ -137,9 +130,7 @@ def test_predict_requires_valid_api_key():
 
 def test_predict_success_returns_estimate_and_range(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", DummyBikeModel())
-    monkeypatch.setattr(
-        api_module, "bike_metadata", {"metrics": {"rmse": 10000.0}}
-    )
+    monkeypatch.setattr(api_module, "bike_metadata", {"metrics": {"rmse": 10000.0}})
 
     response = client.post(
         "/predict",
@@ -166,9 +157,7 @@ def test_predict_success_returns_estimate_and_range(monkeypatch):
 
 def test_predict_car_success(monkeypatch):
     monkeypatch.setattr(api_module, "car_model", DummyCarModel())
-    monkeypatch.setattr(
-        api_module, "car_metadata", {"metrics": {"rmse": 50000.0}}
-    )
+    monkeypatch.setattr(api_module, "car_metadata", {"metrics": {"rmse": 50000.0}})
 
     response = client.post(
         "/predict",

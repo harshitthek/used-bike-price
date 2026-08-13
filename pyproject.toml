@@ -2,11 +2,11 @@
 line-length = 88
 
 [tool.ruff.lint]
-ignore = ["E402"]
+select = ["E", "F", "W", "I"]
+ignore = ["E402", "E501"]
 
 [tool.black]
 line-length = 88
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-

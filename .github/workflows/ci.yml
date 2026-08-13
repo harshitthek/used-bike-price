@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  backend-checks:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -38,3 +38,24 @@ jobs:
     - name: Build Docker Image
       run: |
         docker build -t used-bike-price-api:latest .
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: "npm"
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Node dependencies
+      run: npm ci
+
+    - name: Build Frontend Bundle
+      run: npm run build

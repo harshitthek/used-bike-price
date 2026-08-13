@@ -7,9 +7,9 @@ import os
 from pathlib import Path
 from typing import Dict
 
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
 
 matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt

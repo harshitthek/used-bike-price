@@ -38,9 +38,7 @@ def load_and_preprocess_cars(data_path: Path | str = DATA_PATH) -> pd.DataFrame:
 
     # Extract numeric engine (cc)
     if "engine" in df.columns:
-        df["engine_cc"] = (
-            df["engine"].astype(str).str.extract(r"(\d+)").astype(float)
-        )
+        df["engine_cc"] = df["engine"].astype(str).str.extract(r"(\d+)").astype(float)
 
     # Extract numeric max_power (bhp)
     if "max_power" in df.columns:
@@ -53,9 +51,7 @@ def load_and_preprocess_cars(data_path: Path | str = DATA_PATH) -> pd.DataFrame:
     df["fuel"] = df["fuel"].replace({"Lpg": "CNG"})  # Group rare LPG with CNG
 
     # Standardize transmission
-    df["transmission"] = (
-        df["transmission"].astype(str).str.strip().str.capitalize()
-    )
+    df["transmission"] = df["transmission"].astype(str).str.strip().str.capitalize()
 
     # Owner rank mapping
     owner_map = {

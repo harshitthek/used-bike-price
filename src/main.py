@@ -20,23 +20,23 @@ from sklearn.model_selection import train_test_split
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data_loader import load_data, describe_data
+from src.contracts import OWNER_RANK_MAX, OWNER_RANK_MIN, OWNER_RANK_TO_LABEL
+from src.data_loader import describe_data, load_data
+from src.evaluation import (
+    evaluate_on_test,
+    plot_feature_importance,
+    plot_model_comparison,
+    plot_residuals,
+    save_results,
+)
+from src.feature_engineering import DERIVED_NUMERIC_FEATURES
+from src.models import get_best_model, train_and_compare, tune_best_model
 from src.preprocessing import (
-    preprocess,
-    get_feature_target_split,
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
     TARGET,
-)
-from src.models import train_and_compare, get_best_model, tune_best_model
-from src.contracts import OWNER_RANK_TO_LABEL, OWNER_RANK_MAX, OWNER_RANK_MIN
-from src.feature_engineering import DERIVED_NUMERIC_FEATURES
-from src.evaluation import (
-    evaluate_on_test,
-    plot_model_comparison,
-    plot_residuals,
-    plot_feature_importance,
-    save_results,
+    get_feature_target_split,
+    preprocess,
 )
 
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -134,6 +134,7 @@ def run_train(data_path: str | None = None):
     # ── 8. Generate and save runtime metadata ──────────────────
     import json
     from datetime import datetime, timezone
+
     from src.models import DEFAULT_RANDOM_STATE
 
     metadata = {

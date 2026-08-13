@@ -7,7 +7,7 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, cast
+from typing import Any, Literal, Optional, Tuple, cast
 
 import joblib
 import pandas as pd
@@ -79,14 +79,16 @@ def resolve_allowed_origins() -> list[str]:
         "localhost" in origin or "127.0.0.1" in origin for origin in origins
     )
     if is_local_dev or not origins:
-        origins.extend([
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:5174",
-            "http://127.0.0.1:5174",
-            "http://localhost:5175",
-            "http://127.0.0.1:5175",
-        ])
+        origins.extend(
+            [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5174",
+                "http://localhost:5175",
+                "http://127.0.0.1:5175",
+            ]
+        )
 
     seen = set()
     unique_origins = []
@@ -394,7 +396,9 @@ def prepare_bike_inference(
 
         known_brands = metadata.get("known_brands", [])
         if known_brands and input_dict["brand"] not in known_brands:
-            warnings.append(f"Brand '{input_dict['brand']}' was not seen during training.")
+            warnings.append(
+                f"Brand '{input_dict['brand']}' was not seen during training."
+            )
             ood_features.append("brand")
 
     if ood_features:
@@ -467,7 +471,9 @@ def prepare_car_inference(
 
         known_brands = metadata.get("known_brands", [])
         if known_brands and input_dict["brand"] not in known_brands:
-            warnings.append(f"Brand '{input_dict['brand']}' was not seen during training.")
+            warnings.append(
+                f"Brand '{input_dict['brand']}' was not seen during training."
+            )
             ood_features.append("brand")
 
     if ood_features:
@@ -580,7 +586,11 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
         price = max(floor_price, prediction)
 
         # Compute price range using residual standard error (80% confidence interval ~ 1.28 * RMSE)
-        rmse = float(metadata.get("metrics", {}).get("rmse", default_rmse)) if metadata else default_rmse
+        rmse = (
+            float(metadata.get("metrics", {}).get("rmse", default_rmse))
+            if metadata
+            else default_rmse
+        )
         margin = 1.28 * rmse
         lower_bound = max(floor_price, round(price - margin, -2))
         upper_bound = round(price + margin, -2)
