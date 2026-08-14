@@ -1313,6 +1313,9 @@ def demo_widget_script():
   const container = document.getElementById('autovaluate-portfolio-widget');
   if (!container) return;
 
+  const currentScript = document.currentScript;
+  const apiBase = currentScript ? new URL(currentScript.src).origin : 'http://127.0.0.1:8000';
+
   container.innerHTML = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0d14; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 20px; color: #fff; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
@@ -1376,7 +1379,7 @@ def demo_widget_script():
     btn.disabled = true;
 
     try {
-      const url = `http://127.0.0.1:8000/api/v1/demo/estimate?vehicle_type=bike&brand=${encodeURIComponent(brand)}&power=${power}&age=${age}&kms_driven=${kms}&owner_rank=1`;
+      const url = `${apiBase}/api/v1/demo/estimate?vehicle_type=bike&brand=${encodeURIComponent(brand)}&power=${power}&age=${age}&kms_driven=${kms}&owner_rank=1`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -1394,6 +1397,7 @@ def demo_widget_script():
   });
 })();
 """
+
     return Response(content=script_content, media_type="application/javascript")
 
 

@@ -1,14 +1,13 @@
 services:
   - type: web
-    name: used-bike-price-api
-    env: python
+    name: autovaluate-ai
+    runtime: docker
     plan: free
-    autoDeploy: true
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /ready
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
     envVars:
       - key: API_KEY
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
+        generateValue: true
+      - key: PORT
+        value: 8000
