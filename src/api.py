@@ -15,6 +15,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -452,6 +453,7 @@ def prepare_bike_inference(
             feat_range = ranges.get(feat)
             if feat_range:
                 val = float(input_dict[feat])
+                min_limit = 0.0 if feat in ["age", "kms_driven"] else feat_range["min"]
                 if val > feat_range["max"]:
                     ood_features.append(feat)
                     adjustments.append(
@@ -463,16 +465,16 @@ def prepare_bike_inference(
                         }
                     )
                     input_dict[feat] = feat_range["max"]
-                elif val < feat_range["min"]:
+                elif val < min_limit:
                     adjustments.append(
                         {
                             "feature": feat,
                             "reason": "training_range",
                             "original": val,
-                            "adjusted": feat_range["min"],
+                            "adjusted": min_limit,
                         }
                     )
-                    input_dict[feat] = feat_range["min"]
+                    input_dict[feat] = min_limit
 
         known_brands = metadata.get("known_brands", [])
         if known_brands and input_dict["brand"] not in known_brands:
@@ -556,6 +558,7 @@ def prepare_car_inference(
             feat_range = ranges.get(feat)
             if feat_range:
                 val = float(input_dict[feat])
+                min_limit = 0.0 if feat in ["age", "kms_driven"] else feat_range["min"]
                 if val > feat_range["max"]:
                     ood_features.append(feat)
                     adjustments.append(
@@ -567,16 +570,16 @@ def prepare_car_inference(
                         }
                     )
                     input_dict[feat] = feat_range["max"]
-                elif val < feat_range["min"]:
+                elif val < min_limit:
                     adjustments.append(
                         {
                             "feature": feat,
                             "reason": "training_range",
                             "original": val,
-                            "adjusted": feat_range["min"],
+                            "adjusted": min_limit,
                         }
                     )
-                    input_dict[feat] = feat_range["min"]
+                    input_dict[feat] = min_limit
 
         known_brands = metadata.get("known_brands", [])
         if known_brands and input_dict["brand"] not in known_brands:
@@ -886,9 +889,18 @@ def calculate_depreciation_forecast(
 
 
 @app.get("/")
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 def read_root(request: Request):
+    index_file = PROJECT_ROOT / "frontend" / "dist" / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return {"message": "AutoValuate AI API running"}
+
+
+@app.get("/api")
+@limiter.limit("30/minute")
+def api_status(request: Request):
+    return {"message": "AutoValuate AI API running", "version": "2026.08.14"}
 
 
 @app.get("/health")

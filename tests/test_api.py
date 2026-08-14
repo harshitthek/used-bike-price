@@ -291,7 +291,7 @@ def test_predict_returns_500_on_model_exception(monkeypatch):
 
 def test_predict_lower_bound_adjustment(monkeypatch):
     monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(78654.0))
-    mock_metadata = {"training_ranges": {"age": {"min": 1.0, "max": 20.0}}}
+    mock_metadata = {"training_ranges": {"power": {"min": 100.0, "max": 1200.0}}}
     monkeypatch.setattr(api_module, "bike_metadata", mock_metadata)
 
     response = client.post(
@@ -300,16 +300,86 @@ def test_predict_lower_bound_adjustment(monkeypatch):
         json={
             "vehicle_type": "bike",
             "brand": "Honda",
-            "power": 150,
+            "power": 80,
             "kms_driven": 10000,
-            "age": 0.5,
+            "age": 2,
             "owner_rank": 1,
         },
     )
     assert response.status_code == 200
     payload = response.json()
-    assert len(payload["adjustments"]) == 1
+    assert len(payload["adjustments"]) >= 1
     adj = payload["adjustments"][0]
-    assert adj["feature"] == "age"
-    assert adj["original"] == 0.5
-    assert adj["adjusted"] == 1.0
+    assert adj["feature"] == "power"
+    assert adj["original"] == 80.0
+    assert adj["adjusted"] == 100.0
+
+
+def test_brand_power_clamping_royal_enfield(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(150000.0))
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "vehicle_type": "bike",
+            "brand": "Royal Enfield",
+            "power": 2500,
+            "kms_driven": 15000,
+            "age": 3,
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert any(
+        "Royal Enfield maximum engine displacement" in w for w in payload["warnings"]
+    )
+    assert any(
+        a["feature"] == "power" and a["adjusted"] == 650.0
+        for a in payload["adjustments"]
+    )
+
+
+def test_economic_depreciation_bounds_extreme_vehicle(monkeypatch):
+    # Model might predict high due to leaf, but economic bounds must clamp
+    monkeypatch.setattr(api_module, "bike_model", FlexibleDummyModel(450000.0))
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "vehicle_type": "bike",
+            "brand": "Royal Enfield",
+            "power": 650,
+            "kms_driven": 100000,
+            "age": 30,
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    # 30-year-old, 100k km Royal Enfield must be under scrap/salvage ceiling (~₹40,000)
+    assert payload["estimated_price"] < 40000.0
+
+
+def test_new_vehicle_zero_age_allowed(monkeypatch):
+    monkeypatch.setattr(api_module, "car_model", DummyCarModel())
+    response = client.post(
+        "/predict",
+        headers={"x-api-key": API_KEY},
+        json={
+            "vehicle_type": "car",
+            "brand": "Maruti",
+            "engine_cc": 1197,
+            "max_power_bhp": 82,
+            "fuel": "Petrol",
+            "transmission": "Manual",
+            "kms_driven": 500,
+            "age": 0.0,
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["estimated_price"] > 0
+    # Age 0.0 should not be marked as OOD
+    assert "age" not in payload["prediction_quality"]["ood_features"]

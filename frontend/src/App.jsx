@@ -1124,12 +1124,19 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs text-slate-400">Brand</label>
-                    <input
-                      type="text"
+                    <select
                       value={compareA.brand}
-                      onChange={(e) => setCompareA(prev => ({ ...prev, brand: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
-                    />
+                      onChange={(e) => {
+                        const b = e.target.value
+                        const defaultPower = compareA.vehicle_type === 'bike' ? 350 : 1197
+                        setCompareA(prev => ({ ...prev, brand: b, power: defaultPower, engine_cc: defaultPower }))
+                      }}
+                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-[#0c0e17] border border-white/[0.12] text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      {(contracts[compareA.vehicle_type]?.ui?.brands || []).map(b => (
+                        <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1139,7 +1146,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                         type="number"
                         value={compareA.power || compareA.engine_cc}
                         onChange={(e) => setCompareA(prev => ({ ...prev, power: Number(e.target.value), engine_cc: Number(e.target.value) }))}
-                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
+                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-indigo-500 font-mono"
                       />
                     </div>
                     <div>
@@ -1148,7 +1155,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                         type="number"
                         value={compareA.age}
                         onChange={(e) => setCompareA(prev => ({ ...prev, age: Number(e.target.value) }))}
-                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
+                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-indigo-500 font-mono"
                       />
                     </div>
                   </div>
@@ -1159,7 +1166,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                       type="number"
                       value={compareA.kms_driven}
                       onChange={(e) => setCompareA(prev => ({ ...prev, kms_driven: Number(e.target.value) }))}
-                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
+                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-indigo-500 font-mono"
                     />
                   </div>
                 </div>
@@ -1181,8 +1188,19 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                   <h3 className="text-sm font-bold text-cyan-300">Vehicle B (Alternative Option)</h3>
                   <select 
                     value={compareB.vehicle_type} 
-                    onChange={(e) => setCompareB(prev => ({ ...prev, vehicle_type: e.target.value }))}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white"
+                    onChange={(e) => {
+                      const newType = e.target.value
+                      const defaultBrand = newType === 'bike' ? 'KTM' : 'Hyundai'
+                      const defaultPower = newType === 'bike' ? 373 : 1493
+                      setCompareB(prev => ({
+                        ...prev,
+                        vehicle_type: newType,
+                        brand: defaultBrand,
+                        power: defaultPower,
+                        engine_cc: defaultPower
+                      }))
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
                   >
                     <option value="bike" className="bg-slate-900">Motorcycle</option>
                     <option value="car" className="bg-slate-900">Car</option>
@@ -1192,12 +1210,19 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs text-slate-400">Brand</label>
-                    <input
-                      type="text"
+                    <select
                       value={compareB.brand}
-                      onChange={(e) => setCompareB(prev => ({ ...prev, brand: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
-                    />
+                      onChange={(e) => {
+                        const b = e.target.value
+                        const defaultPower = compareB.vehicle_type === 'bike' ? 373 : 1493
+                        setCompareB(prev => ({ ...prev, brand: b, power: defaultPower, engine_cc: defaultPower }))
+                      }}
+                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-[#0c0e17] border border-white/[0.12] text-white focus:outline-none focus:border-cyan-500"
+                    >
+                      {(contracts[compareB.vehicle_type]?.ui?.brands || []).map(b => (
+                        <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1207,7 +1232,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                         type="number"
                         value={compareB.power || compareB.engine_cc}
                         onChange={(e) => setCompareB(prev => ({ ...prev, power: Number(e.target.value), engine_cc: Number(e.target.value) }))}
-                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
+                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500 font-mono"
                       />
                     </div>
                     <div>
@@ -1216,7 +1241,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                         type="number"
                         value={compareB.age}
                         onChange={(e) => setCompareB(prev => ({ ...prev, age: Number(e.target.value) }))}
-                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
+                        className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500 font-mono"
                       />
                     </div>
                   </div>
@@ -1227,10 +1252,11 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                       type="number"
                       value={compareB.kms_driven}
                       onChange={(e) => setCompareB(prev => ({ ...prev, kms_driven: Number(e.target.value) }))}
-                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white"
+                      className="w-full mt-1 px-3 py-2 text-xs rounded-lg bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500 font-mono"
                     />
                   </div>
                 </div>
+
 
                 {resultB && (
                   <div className="mt-6 p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-center">
