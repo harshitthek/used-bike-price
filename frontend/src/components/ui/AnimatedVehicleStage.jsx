@@ -12,12 +12,10 @@ import {
   CloudRain, 
   Volume2, 
   VolumeX, 
-  Fuel,
-  Sparkles,
-  TrendingDown
+  Fuel
 } from 'lucide-react'
 
-// Web Audio API engine sound generator with smooth gain ramping
+// Web Audio API engine sound generator
 class EngineAudio {
   constructor() {
     this.ctx = null
@@ -117,8 +115,8 @@ const getBrandColor = (brand, vType) => {
   if (b.includes('hero')) return '#10b981'
   if (b.includes('bajaj')) return '#a855f7'
   if (b.includes('harley')) return '#ea580c'
-  if (b.includes('hyundai')) return '#60a5fa'
-  if (b.includes('maruti')) return '#38bdf8'
+  if (b.includes('hyundai')) return '#38bdf8'
+  if (b.includes('maruti')) return '#60a5fa'
   if (b.includes('tata')) return '#34d399'
   if (b.includes('mahindra')) return '#fbbf24'
   if (b.includes('toyota')) return '#f43f5e'
@@ -151,10 +149,10 @@ export function AnimatedVehicleStage({
   const currentPoint = timeline.find((p) => p.year === activeYear) || timeline[0] || {}
   const isOptimal = activeYear === optimalYear
 
-  // Simulated live speed and RPM values
-  const simulatedSpeed = isPlaying ? Math.min(110, 40 + activeYear * 12) : 0
-  const simulatedRPM = isPlaying ? Math.min(7500, 2400 + (activeYear % 3) * 1600 + Math.sin(activeYear) * 400) : 900
-  const currentGear = isPlaying ? Math.min(6, Math.max(1, Math.floor(activeYear / 1.4) + 1)) : 'N'
+  // Simulated live speed and RPM values (integer rounded, no decimal overflow)
+  const simulatedSpeed = isPlaying ? Math.round(Math.min(115, 45 + activeYear * 9.5)) : 0
+  const simulatedRPM = isPlaying ? Math.round(Math.min(7200, 2400 + (activeYear % 3) * 1400 + Math.sin(activeYear) * 350)) : 900
+  const currentGear = isPlaying ? Math.min(6, Math.max(1, Math.floor(activeYear / 1.6) + 1)) : 'N'
 
   // Audio lifecycle
   useEffect(() => {
@@ -201,8 +199,8 @@ export function AnimatedVehicleStage({
     }
   }, [isPlaying, playbackSpeed, maxYear, onYearSelect])
 
-  // Clamp vehicle horizontal position (15% to 78%)
-  const vehicleProgressPct = maxYear > 0 ? (activeYear / maxYear) * 63 + 15 : 45
+  // Clamp vehicle horizontal position (15% to 75%)
+  const vehicleProgressPct = maxYear > 0 ? (activeYear / maxYear) * 60 + 16 : 45
 
   // Environment styling tokens
   const envConfig = {
@@ -299,21 +297,21 @@ export function AnimatedVehicleStage({
                   <button
                     type="button"
                     onClick={() => setBodyStyle('cruiser')}
-                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'cruiser' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'cruiser' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Cruiser
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('sport')}
-                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sport' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sport' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Supersport
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('naked')}
-                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'naked' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'naked' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Naked
                   </button>
@@ -323,21 +321,21 @@ export function AnimatedVehicleStage({
                   <button
                     type="button"
                     onClick={() => setBodyStyle('sedan')}
-                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sedan' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sedan' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Sedan
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('suv')}
-                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'suv' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'suv' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Compact SUV
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('offroad')}
-                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'offroad' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'offroad' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Rugged 4x4
                   </button>
@@ -347,8 +345,8 @@ export function AnimatedVehicleStage({
           </div>
         </div>
 
-        {/* Center: Live Real-Time Telemetry Gauges */}
-        <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 shadow-inner">
+        {/* Center: Real-Time Telemetry Cluster */}
+        <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 shadow-inner">
           <div className="text-center">
             <span className="text-[8px] uppercase tracking-wider text-slate-400 block">Speed</span>
             <span className="text-xs font-black text-white font-mono">{simulatedSpeed} <span className="text-[9px] font-normal text-slate-400">km/h</span></span>
@@ -363,15 +361,15 @@ export function AnimatedVehicleStage({
 
           <div className="w-[1px] h-5 bg-white/10" />
 
-          <div className="w-14 text-center">
+          <div className="w-16 text-center">
             <div className="flex justify-between text-[8px] font-mono text-slate-400">
               <span>RPM</span>
               <span className={simulatedRPM > 5500 ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{simulatedRPM}</span>
             </div>
-            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden mt-0.5">
+            <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden mt-0.5">
               <div 
                 className={`h-full transition-all duration-100 ${simulatedRPM > 5500 ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-cyan-400 to-indigo-500'}`}
-                style={{ width: `${Math.min(100, (simulatedRPM / 8000) * 100)}%` }}
+                style={{ width: `${Math.min(100, (simulatedRPM / 7500) * 100)}%` }}
               />
             </div>
           </div>
@@ -442,7 +440,7 @@ export function AnimatedVehicleStage({
               }
               setIsPlaying(!isPlaying)
             }}
-            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 cursor-pointer transition-all"
+            className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 cursor-pointer transition-all"
           >
             {isPlaying ? <Pause size={13} /> : <Play size={13} />}
             <span>{isPlaying ? 'Pause' : 'Play Drive'}</span>
@@ -464,9 +462,9 @@ export function AnimatedVehicleStage({
       </div>
 
       {/* ============================================================ */}
-      {/* 🛣️ MAIN HIGHWAY STAGE (CLEAN VIEWPORT WITHOUT HUD CLUTTER)  */}
+      {/* 🛣️ MAIN HIGHWAY STAGE                                        */}
       {/* ============================================================ */}
-      <div className="relative w-full h-48 rounded-xl bg-[#090b12] border border-white/[0.06] overflow-hidden flex flex-col justify-end">
+      <div className="relative w-full h-44 rounded-xl bg-[#090b12] border border-white/[0.06] overflow-hidden flex flex-col justify-end">
         
         {/* Speed Wind Streaks */}
         <div className="absolute top-2 left-0 right-0 h-16 pointer-events-none overflow-hidden">
@@ -492,8 +490,8 @@ export function AnimatedVehicleStage({
           ))}
         </div>
 
-        {/* Milestone Roadside Signposts (Positioned cleanly on top of roadside) */}
-        <div className="absolute top-4 left-0 right-0 flex justify-between px-8 pointer-events-none z-10">
+        {/* Milestone Roadside Signposts (evenly distributed at top) */}
+        <div className="absolute top-3 inset-x-0 flex justify-between px-6 pointer-events-none z-10">
           {timeline.map((pt) => {
             const isTarget = pt.year === activeYear
             const isOpt = pt.year === optimalYear
@@ -505,7 +503,7 @@ export function AnimatedVehicleStage({
                 }`}
               >
                 <div 
-                  className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold border ${
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border ${
                     isOpt
                       ? 'bg-amber-500/25 text-amber-300 border-amber-500/60 shadow-lg shadow-amber-500/20'
                       : isTarget
@@ -515,7 +513,7 @@ export function AnimatedVehicleStage({
                 >
                   {isOpt ? '🏆 YR ' + pt.year : 'YR ' + pt.year}
                 </div>
-                <div className="w-[1px] h-3 bg-white/10 mt-1" />
+                <div className="w-[1px] h-2 bg-white/10 mt-0.5" />
               </div>
             )
           })}
@@ -528,7 +526,7 @@ export function AnimatedVehicleStage({
               initial={{ opacity: 0, y: -10, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.92 }}
-              className="absolute top-12 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500/30 via-orange-500/30 to-amber-500/30 border border-amber-400/70 shadow-xl shadow-amber-500/30 flex items-center gap-1.5 text-amber-200 text-[11px] font-black backdrop-blur-md"
+              className="absolute top-9 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500/30 via-orange-500/30 to-amber-500/30 border border-amber-400/70 shadow-xl shadow-amber-500/30 flex items-center gap-1.5 text-amber-200 text-[11px] font-black backdrop-blur-md"
             >
               <Award size={13} className="text-amber-400 animate-bounce" />
               <span>Optimal Liquidation Sweet-Spot Reached! (Year {activeYear})</span>
@@ -536,84 +534,84 @@ export function AnimatedVehicleStage({
           )}
         </AnimatePresence>
 
-        {/* 🚗 MOVING VEHICLE STAGE AREA */}
-        <div className="relative w-full h-24 mb-2 overflow-hidden">
+        {/* 🚗 VEHICLE GROUND-ALIGNED STAGE */}
+        <div className="relative w-full h-20 overflow-hidden">
           <motion.div
-            className="absolute bottom-1 z-20"
+            className="absolute bottom-0 z-20"
             animate={{
               left: `${vehicleProgressPct}%`,
               x: "-50%",
-              y: [0, -1.5, 0, 1.2, 0]
+              y: [0, -1.2, 0, 0.8, 0]
             }}
             transition={{
               left: { type: 'spring', stiffness: 90, damping: 22 },
               y: { repeat: Infinity, duration: isPlaying ? 0.6 : 1.2, ease: 'easeInOut' }
             }}
           >
-            {/* Vehicle Graphic Wrapper */}
+            {/* Vehicle Graphic Container */}
             <div className="relative">
               
-              {/* Dynamic Neon Underglow */}
+              {/* Dynamic Underglow */}
               <div 
-                className="absolute -bottom-1 left-4 right-4 h-3 rounded-full blur-md opacity-70 pointer-events-none"
+                className="absolute bottom-0 left-6 right-6 h-2 rounded-full blur-sm opacity-80 pointer-events-none"
                 style={{ background: brandColor }}
               />
 
-              {/* Exhaust Particle Flame */}
+              {/* Exhaust Flame */}
               {isPlaying && (
-                <div className="absolute top-8 -left-4 pointer-events-none">
-                  <Flame size={15} className="text-amber-400 animate-exhaust-particle" />
+                <div className="absolute bottom-2 -left-3 pointer-events-none">
+                  <Flame size={14} className="text-amber-400 animate-exhaust-particle" />
                 </div>
               )}
 
               {/* Monsoon Tire Water Spray */}
               {environment === 'monsoon' && isPlaying && (
-                <div className="absolute bottom-0 -left-6 pointer-events-none opacity-60">
+                <div className="absolute bottom-0 -left-5 pointer-events-none opacity-60">
                   <div className="w-8 h-2 bg-gradient-to-l from-cyan-300 to-transparent blur-sm transform -rotate-12" />
                 </div>
               )}
 
               {/* VEHICLE RENDERING SELECTION */}
               {vehicleType === 'bike' ? (
-                /* 🏍️ ACCURATE MOTORCYCLE VECTOR */
+                /* 🏍️ ACCURATE MOTORCYCLE VECTOR (Ground aligned at bottom) */
                 <div className="relative">
                   {/* Headlight Beam from Front Lamp */}
                   <div 
-                    className="absolute top-7 left-24 w-44 h-12 pointer-events-none animate-beam"
+                    className="absolute bottom-5 left-24 w-44 h-10 pointer-events-none animate-beam"
                     style={{
                       background: 'linear-gradient(90deg, rgba(255,255,255,0.45) 0%, rgba(34,211,238,0.2) 35%, transparent 100%)',
                       clipPath: 'polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%)'
                     }}
                   />
 
-                  <svg width="130" height="75" viewBox="0 0 130 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="140" height="65" viewBox="0 0 140 65" fill="none" xmlns="http://www.w3.org/2000/svg">
                     {/* Chassis Frame & Engine */}
-                    <path d="M30 52 L56 36 L80 36 L98 52" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
-                    <path d="M56 36 L66 50 L46 50 Z" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
+                    <path d="M34 50 L58 35 L82 35 L104 50" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
+                    <path d="M58 35 L68 48 L48 48 Z" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
                     
                     {/* Engine Details */}
-                    <rect x="52" y="42" width="14" height="8" rx="2" fill="#475569" />
-                    <line x1="54" y1="44" x2="64" y2="44" stroke="#94a3b8" strokeWidth="1" />
-                    <line x1="54" y1="47" x2="64" y2="47" stroke="#94a3b8" strokeWidth="1" />
+                    <rect x="54" y="40" width="14" height="8" rx="2" fill="#475569" />
+                    <line x1="56" y1="42" x2="66" y2="42" stroke="#94a3b8" strokeWidth="1" />
+                    <line x1="56" y1="45" x2="66" y2="45" stroke="#94a3b8" strokeWidth="1" />
 
                     {/* Tank & Fairing by Style */}
                     {bodyStyle === 'sport' ? (
                       <path 
-                        d="M46 36 C52 26, 75 24, 88 34 L82 44 L50 42 Z" 
+                        d="M48 35 C54 25, 78 23, 92 33 L86 43 L52 41 Z" 
                         fill={brandColor} 
                         stroke="#ffffff" 
                         strokeWidth="0.8" 
                       />
                     ) : bodyStyle === 'naked' ? (
                       <path 
-                        d="M50 36 C54 30, 72 28, 80 34 L74 38 L52 38 Z" 
+                        d="M52 35 C56 29, 74 27, 82 33 L76 37 L54 37 Z" 
                         fill={brandColor} 
                         stroke="#ffffff" 
                         strokeWidth="0.8" 
                       />
                     ) : (
                       <path 
-                        d="M50 35 C52 28, 70 27, 80 34 L72 38 L52 38 Z" 
+                        d="M52 34 C54 27, 72 26, 82 33 L74 37 L54 37 Z" 
                         fill={brandColor} 
                         stroke="#ffffff" 
                         strokeWidth="0.8" 
@@ -621,160 +619,176 @@ export function AnimatedVehicleStage({
                     )}
 
                     {/* Seat & Tail */}
-                    <path d="M40 35 C44 35, 50 36, 54 38 L42 41 Z" fill="#0f172a" />
-                    <rect x="38" y="33" width="18" height="4" rx="2" fill="#020617" />
+                    <path d="M42 34 C46 34, 52 35, 56 37 L44 40 Z" fill="#0f172a" />
+                    <rect x="40" y="32" width="18" height="4" rx="2" fill="#020617" />
 
                     {/* Handlebars & Mirror */}
-                    <path d="M78 35 L84 25 L91 26" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
-                    <circle cx="91" cy="26" r="2" fill="#38bdf8" />
+                    <path d="M80 34 L86 24 L93 25" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
+                    <circle cx="93" cy="25" r="2" fill="#38bdf8" />
 
                     {/* Exhaust Pipe */}
-                    <path d="M58 50 C68 52, 42 54, 26 55" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
-                    <path d="M26 55 L20 55" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
+                    <path d="M60 48 C70 50, 44 52, 28 53" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M28 53 L22 53" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
 
                     {/* Rider Silhouette */}
                     <g opacity="0.95">
-                      <circle cx="70" cy="17" r="7" fill="#0f172a" stroke={brandColor} strokeWidth="1.5" />
-                      <path d="M73 16 Q77 17 76 19" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M67 24 L56 35 L74 35 Z" fill="#1e293b" />
-                      <path d="M64 27 L82 29" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+                      <circle cx="72" cy="16" r="7" fill="#0f172a" stroke={brandColor} strokeWidth="1.5" />
+                      <path d="M75 15 Q79 16 78 18" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M69 23 L58 34 L76 34 Z" fill="#1e293b" />
+                      <path d="M66 26 L84 28" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
                     </g>
 
-                    {/* Rear Wheel (Zero-Centered Transform) */}
-                    <g transform="translate(30, 52)">
-                      <circle cx="0" cy="0" r="14" stroke="#0f172a" strokeWidth="5" fill="#020617" />
+                    {/* Rear Wheel (Zero-Centered Math Pivot cx=34, cy=50, touches ground at y=63) */}
+                    <g transform="translate(34, 50)">
+                      <circle cx="0" cy="0" r="13" stroke="#0f172a" strokeWidth="4.5" fill="#020617" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
-                        <circle cx="0" cy="0" r="10" stroke={brandColor} strokeWidth="1.5" strokeDasharray="4 3" fill="none" />
-                        <line x1="-8" y1="0" x2="8" y2="0" stroke="#cbd5e1" strokeWidth="1.2" />
-                        <line x1="0" y1="-8" x2="0" y2="8" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <circle cx="0" cy="0" r="9" stroke={brandColor} strokeWidth="1.2" strokeDasharray="4 3" fill="none" />
+                        <line x1="-7" y1="0" x2="7" y2="0" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <line x1="0" y1="-7" x2="0" y2="7" stroke="#cbd5e1" strokeWidth="1.2" />
                         <circle cx="0" cy="0" r="3.5" fill="#64748b" />
                       </g>
                     </g>
 
-                    {/* Front Wheel (Zero-Centered Transform) */}
-                    <g transform="translate(98, 52)">
-                      <circle cx="0" cy="0" r="14" stroke="#0f172a" strokeWidth="5" fill="#020617" />
+                    {/* Front Wheel (Zero-Centered Math Pivot cx=104, cy=50, touches ground at y=63) */}
+                    <g transform="translate(104, 50)">
+                      <circle cx="0" cy="0" r="13" stroke="#0f172a" strokeWidth="4.5" fill="#020617" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
-                        <circle cx="0" cy="0" r="10" stroke={brandColor} strokeWidth="1.5" strokeDasharray="4 3" fill="none" />
-                        <line x1="-8" y1="0" x2="8" y2="0" stroke="#cbd5e1" strokeWidth="1.2" />
-                        <line x1="0" y1="-8" x2="0" y2="8" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <circle cx="0" cy="0" r="9" stroke={brandColor} strokeWidth="1.2" strokeDasharray="4 3" fill="none" />
+                        <line x1="-7" y1="0" x2="7" y2="0" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <line x1="0" y1="-7" x2="0" y2="7" stroke="#cbd5e1" strokeWidth="1.2" />
                         <circle cx="0" cy="0" r="3.5" fill="#64748b" />
                       </g>
                     </g>
 
                     {/* Front Headlight Bulb */}
-                    <circle cx="94" cy="32" r="3" fill="#ffffff" />
+                    <circle cx="98" cy="30" r="3" fill="#ffffff" />
                   </svg>
                 </div>
               ) : (
-                /* 🚗 HANDCRAFTED AUTOMOTIVE CAR / SUV VECTOR */
+                /* 🚗 HANDCRAFTED SLEEK CAR VECTOR (Ground aligned at bottom) */
                 <div className="relative">
-                  {/* Headlight Beam from Front Bumper Nose */}
+                  {/* Headlight Beam from Front Bumper */}
                   <div 
-                    className="absolute top-9 left-36 w-48 h-12 pointer-events-none animate-beam"
+                    className="absolute bottom-3 left-36 w-52 h-10 pointer-events-none animate-beam"
                     style={{
                       background: 'linear-gradient(90deg, rgba(255,255,255,0.5) 0%, rgba(34,211,238,0.25) 35%, transparent 100%)',
                       clipPath: 'polygon(0% 45%, 100% 0%, 100% 100%, 0% 55%)'
                     }}
                   />
 
-                  <svg width="156" height="70" viewBox="0 0 156 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="160" height="60" viewBox="0 0 160 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                      <linearGradient id="bodyPaintGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
-                        <stop offset="30%" stopColor={brandColor} stopOpacity="1" />
-                        <stop offset="100%" stopColor="#0f172a" stopOpacity="1" />
+                      <linearGradient id="bodyPaintGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+                        <stop offset="35%" stopColor={brandColor} stopOpacity="1" />
+                        <stop offset="100%" stopColor="#090d16" stopOpacity="1" />
                       </linearGradient>
-                      <linearGradient id="glassGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#1e293b" />
+                      <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#334155" />
                         <stop offset="100%" stopColor="#020617" />
                       </linearGradient>
                     </defs>
 
                     {/* Dynamic Body Silhouette by Style */}
                     {bodyStyle === 'offroad' ? (
-                      /* 🛻 Rugged 4x4 with Wheel Arches */
+                      /* 🛻 Rugged 4x4 */
                       <>
+                        {/* Wheel Arch Cavities */}
+                        <circle cx="36" cy="46" r="14" fill="#06090e" />
+                        <circle cx="120" cy="46" r="14" fill="#06090e" />
+
+                        {/* Main Body */}
                         <path 
-                          d="M12 48 L12 32 L34 32 L46 18 L100 18 L118 32 L146 36 L148 48 L134 48 A 16 16 0 0 0 102 48 L54 48 A 16 16 0 0 0 22 48 Z" 
-                          fill="url(#bodyPaintGradient2)" 
+                          d="M10 46 L10 30 L32 30 L44 14 L102 14 L122 30 L150 34 L152 46 L134 46 A 14 14 0 0 0 106 46 L50 46 A 14 14 0 0 0 22 46 Z" 
+                          fill="url(#bodyPaintGrad)" 
                           stroke="#ffffff" 
                           strokeWidth="0.8" 
                         />
-                        <line x1="48" y1="15" x2="98" y2="15" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
-                        <line x1="58" y1="15" x2="58" y2="18" stroke="#94a3b8" strokeWidth="2" />
-                        <line x1="88" y1="15" x2="88" y2="18" stroke="#94a3b8" strokeWidth="2" />
-                        <path d="M48 20 L96 20 L112 32 L36 32 Z" fill="url(#glassGradient2)" stroke="#334155" strokeWidth="1" />
-                        <line x1="72" y1="20" x2="72" y2="32" stroke="#475569" strokeWidth="2" />
+                        {/* Overland Roof Rack */}
+                        <line x1="46" y1="11" x2="100" y2="11" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
+                        <line x1="56" y1="11" x2="56" y2="14" stroke="#94a3b8" strokeWidth="2" />
+                        <line x1="90" y1="11" x2="90" y2="14" stroke="#94a3b8" strokeWidth="2" />
+                        {/* Tinted Windows */}
+                        <path d="M46 16 L98 16 L116 30 L34 30 Z" fill="url(#glassGrad)" stroke="#1e293b" strokeWidth="1" />
+                        <line x1="72" y1="16" x2="72" y2="30" stroke="#0f172a" strokeWidth="2.5" />
                       </>
                     ) : bodyStyle === 'suv' ? (
                       /* 🚙 Modern Compact SUV */
                       <>
+                        <circle cx="36" cy="46" r="14" fill="#06090e" />
+                        <circle cx="120" cy="46" r="14" fill="#06090e" />
+
                         <path 
-                          d="M12 48 L22 36 L44 20 L98 20 L122 34 L146 38 L148 48 L134 48 A 16 16 0 0 0 102 48 L54 48 A 16 16 0 0 0 22 48 Z" 
-                          fill="url(#bodyPaintGradient2)" 
+                          d="M10 46 L20 34 L42 16 L100 16 L126 32 L150 36 L152 46 L134 46 A 14 14 0 0 0 106 46 L50 46 A 14 14 0 0 0 22 46 Z" 
+                          fill="url(#bodyPaintGrad)" 
                           stroke="#ffffff" 
                           strokeWidth="0.8" 
                         />
-                        <line x1="50" y1="17" x2="94" y2="17" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
-                        <path d="M46 22 L94 22 L116 34 L38 34 Z" fill="url(#glassGradient2)" stroke="#334155" strokeWidth="1" />
-                        <line x1="74" y1="22" x2="74" y2="34" stroke="#475569" strokeWidth="2" />
+                        {/* Roof Rails */}
+                        <line x1="48" y1="13" x2="96" y2="13" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
+                        {/* Windows */}
+                        <path d="M44 18 L96 18 L120 32 L36 32 Z" fill="url(#glassGrad)" stroke="#1e293b" strokeWidth="1" />
+                        <line x1="74" y1="18" x2="74" y2="32" stroke="#0f172a" strokeWidth="2.5" />
                       </>
                     ) : (
                       /* 🚗 Aerodynamic Luxury Sedan */
                       <>
+                        <circle cx="36" cy="46" r="14" fill="#06090e" />
+                        <circle cx="120" cy="46" r="14" fill="#06090e" />
+
                         <path 
-                          d="M12 48 L25 38 L48 22 L94 22 L120 34 L144 38 L148 48 L134 48 A 16 16 0 0 0 102 48 L54 48 A 16 16 0 0 0 22 48 Z" 
-                          fill="url(#bodyPaintGradient2)" 
+                          d="M10 46 L24 36 L48 18 L96 18 L124 32 L148 36 L152 46 L134 46 A 14 14 0 0 0 106 46 L50 46 A 14 14 0 0 0 22 46 Z" 
+                          fill="url(#bodyPaintGrad)" 
                           stroke="#ffffff" 
                           strokeWidth="0.8" 
                         />
-                        <path d="M50 24 L92 24 L114 34 L44 34 Z" fill="url(#glassGradient2)" stroke="#334155" strokeWidth="1" />
-                        <line x1="72" y1="24" x2="72" y2="34" stroke="#475569" strokeWidth="2" />
+                        {/* Windows */}
+                        <path d="M50 20 L94 20 L118 32 L42 32 Z" fill="url(#glassGrad)" stroke="#1e293b" strokeWidth="1" />
+                        <line x1="72" y1="20" x2="72" y2="32" stroke="#0f172a" strokeWidth="2.5" />
                       </>
                     )}
 
-                    {/* Side Character Line */}
-                    <path d="M28 40 L136 40" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1" />
+                    {/* Side Character Crease */}
+                    <path d="M26 38 L140 38" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1" />
                     
                     {/* Door Handles */}
-                    <rect x="58" y="36" width="7" height="1.8" rx="0.8" fill="#020617" />
-                    <rect x="88" y="36" width="7" height="1.8" rx="0.8" fill="#020617" />
+                    <rect x="56" y="34" width="7" height="1.8" rx="0.8" fill="#020617" />
+                    <rect x="88" y="34" width="7" height="1.8" rx="0.8" fill="#020617" />
 
                     {/* Side Mirror */}
-                    <path d="M112 33 L118 31 L118 35 Z" fill="#0f172a" stroke="#ffffff" strokeWidth="0.5" />
+                    <path d="M116 31 L122 29 L122 33 Z" fill="#0f172a" stroke="#ffffff" strokeWidth="0.5" />
 
-                    {/* Front Projector Headlight */}
-                    <path d="M140 39 L147 40 L145 44 Z" fill="#ffffff" />
-                    <circle cx="143" cy="42" r="1.5" fill="#38bdf8" />
+                    {/* Front Projector LED Headlight */}
+                    <path d="M144 37 L151 38 L149 42 Z" fill="#ffffff" />
+                    <circle cx="147" cy="40" r="1.5" fill="#38bdf8" />
 
-                    {/* Rear LED Taillight */}
-                    <path d="M12 40 L16 40 L15 44 Z" fill="#f43f5e" />
-                    <circle cx="14" cy="42" r="1.2" fill="#ff4d4d" />
+                    {/* Rear LED Taillight Bar */}
+                    <path d="M10 38 L15 38 L14 42 Z" fill="#f43f5e" />
+                    <circle cx="12" cy="40" r="1.2" fill="#ff4d4d" />
 
-                    {/* Rear Wheel (Zero-Centered Math Pivot cx=38, cy=48) */}
-                    <g transform="translate(38, 48)">
-                      <circle cx="0" cy="0" r="13" stroke="#020617" strokeWidth="4.5" fill="#0f172a" />
+                    {/* Rear Wheel (Zero-Centered Math Pivot cx=36, cy=46, touches ground at y=58) */}
+                    <g transform="translate(36, 46)">
+                      <circle cx="0" cy="0" r="12" stroke="#020617" strokeWidth="4" fill="#0f172a" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
-                        <circle cx="0" cy="0" r="9" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
-                        <line x1="-7" y1="0" x2="7" y2="0" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <line x1="0" y1="-7" x2="0" y2="7" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <line x1="-5" y1="-5" x2="5" y2="5" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <line x1="-5" y1="5" x2="5" y2="-5" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <circle cx="0" cy="0" r="3" fill="#cbd5e1" />
+                        <circle cx="0" cy="0" r="8.5" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
+                        <line x1="-6.5" y1="0" x2="6.5" y2="0" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="0" y1="-6.5" x2="0" y2="6.5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-4.5" y1="-4.5" x2="4.5" y2="4.5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-4.5" y1="4.5" x2="4.5" y2="-4.5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <circle cx="0" cy="0" r="2.8" fill="#cbd5e1" />
                       </g>
                     </g>
 
-                    {/* Front Wheel (Zero-Centered Math Pivot cx=118, cy=48) */}
-                    <g transform="translate(118, 48)">
-                      <circle cx="0" cy="0" r="13" stroke="#020617" strokeWidth="4.5" fill="#0f172a" />
+                    {/* Front Wheel (Zero-Centered Math Pivot cx=120, cy=46, touches ground at y=58) */}
+                    <g transform="translate(120, 46)">
+                      <circle cx="0" cy="0" r="12" stroke="#020617" strokeWidth="4" fill="#0f172a" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
-                        <circle cx="0" cy="0" r="9" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
-                        <line x1="-7" y1="0" x2="7" y2="0" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <line x1="0" y1="-7" x2="0" y2="7" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <line x1="-5" y1="-5" x2="5" y2="5" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <line x1="-5" y1="5" x2="5" y2="-5" stroke="#cbd5e1" strokeWidth="1.5" />
-                        <circle cx="0" cy="0" r="3" fill="#cbd5e1" />
+                        <circle cx="0" cy="0" r="8.5" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
+                        <line x1="-6.5" y1="0" x2="6.5" y2="0" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="0" y1="-6.5" x2="0" y2="6.5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-4.5" y1="-4.5" x2="4.5" y2="4.5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-4.5" y1="4.5" x2="4.5" y2="-4.5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <circle cx="0" cy="0" r="2.8" fill="#cbd5e1" />
                       </g>
                     </g>
                   </svg>
@@ -785,7 +799,7 @@ export function AnimatedVehicleStage({
         </div>
 
         {/* 🛣️ Animated Roadway Asphalt with Dynamic Center Markings */}
-        <div className={`relative w-full h-8 bg-gradient-to-b from-[#181d2e] via-[#111422] to-[#0a0c16] border-t ${envConfig.roadBorder} overflow-hidden flex items-center`}>
+        <div className={`relative w-full h-7 bg-gradient-to-b from-[#181d2e] via-[#111422] to-[#0a0c16] border-t ${envConfig.roadBorder} overflow-hidden flex items-center`}>
           <div className={`absolute inset-0 flex items-center ${isPlaying ? (playbackSpeed === 2 ? 'animate-road-fast' : 'animate-road-medium') : ''}`}>
             {[...Array(32)].map((_, idx) => (
               <div
@@ -801,47 +815,51 @@ export function AnimatedVehicleStage({
       {/* ============================================================ */}
       {/* 🧭 BOTTOM TIMELINE MILESTONE SCRUBBER & LIVE STATISTICS       */}
       {/* ============================================================ */}
-      <div className="mt-4 pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 font-semibold">Simulated Year:</span>
-          <div className="flex items-center gap-1 flex-wrap">
-            {timeline.map((pt) => {
-              const isOpt = pt.year === optimalYear
-              const isSel = activeYear === pt.year
-              return (
-                <button
-                  key={pt.year}
-                  type="button"
-                  onClick={() => {
-                    setIsPlaying(false)
-                    onYearSelect(pt.year)
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                    isSel
-                      ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/30 scale-105 border border-white/20'
-                      : isOpt
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                      : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.06]'
-                  }`}
-                >
-                  {isOpt ? `🏆 Yr ${pt.year}` : `Yr ${pt.year}`}
-                </button>
-              )
-            })}
-          </div>
+      <div className="mt-4 pt-3 border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+        
+        {/* Horizontal Single-Row Milestone Scrubber */}
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 md:pb-0 scrollbar-none">
+          <span className="text-slate-400 font-semibold shrink-0 mr-1">Year:</span>
+          {timeline.map((pt) => {
+            const isOpt = pt.year === optimalYear
+            const isSel = activeYear === pt.year
+            return (
+              <button
+                key={pt.year}
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false)
+                  onYearSelect(pt.year)
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 ${
+                  isSel
+                    ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/30 scale-105 border border-white/20'
+                    : isOpt
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                    : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.06]'
+                }`}
+              >
+                {isOpt ? `🏆 Yr ${pt.year}` : `Yr ${pt.year}`}
+              </button>
+            )
+          })}
         </div>
 
-        {/* Live Step Stats Pill */}
-        <div className="flex items-center gap-3 text-[11px] font-mono">
+        {/* Live Step Stats Readout */}
+        <div className="flex items-center gap-4 text-[11px] font-mono shrink-0 bg-white/[0.02] px-3 py-1.5 rounded-xl border border-white/[0.06]">
           <div className="flex items-center gap-1 text-slate-300">
             <span className="text-slate-500">Odometer:</span>
-            <span className="font-bold text-cyan-300">{currentPoint.total_kms?.toLocaleString('en-IN') || 0} km</span>
+            <span className="font-bold text-cyan-300">{(currentPoint.total_kms || 0).toLocaleString('en-IN')} km</span>
           </div>
+
+          <div className="w-[1px] h-3 bg-white/10" />
 
           <div className="flex items-center gap-1 text-slate-300">
             <span className="text-slate-500">Resale:</span>
-            <span className="font-bold text-emerald-400">₹{currentPoint.resale_value?.toLocaleString('en-IN') || 0}</span>
+            <span className="font-bold text-emerald-400">₹{(currentPoint.resale_value || 0).toLocaleString('en-IN')}</span>
           </div>
+
+          <div className="w-[1px] h-3 bg-white/10" />
 
           <div className="flex items-center gap-1 text-slate-300">
             <span className="text-slate-500">Cost/KM:</span>
