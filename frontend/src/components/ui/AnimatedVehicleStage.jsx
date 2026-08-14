@@ -61,7 +61,6 @@ class EngineAudio {
       this.filterNode.type = 'lowpass'
       this.filterNode.frequency.setValueAtTime(420, this.ctx.currentTime)
 
-      // Smooth volume ramp
       this.gainNode.gain.setValueAtTime(0.001, this.ctx.currentTime)
       this.gainNode.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.1)
 
@@ -72,9 +71,7 @@ class EngineAudio {
 
       this.osc1.start()
       this.osc2.start()
-    } catch (e) {
-      // Audio playback gesture pending
-    }
+    } catch (e) {}
   }
 
   setRPM(rpm) {
@@ -183,7 +180,7 @@ export function AnimatedVehicleStage({
     }
   }, [simulatedRPM, isPlaying, soundEnabled])
 
-  // Playback Loop: Stop smoothly at maxYear without glitching
+  // Playback Loop: Stop smoothly at maxYear without jumping
   useEffect(() => {
     let interval = null
     if (isPlaying) {
@@ -203,8 +200,8 @@ export function AnimatedVehicleStage({
     }
   }, [isPlaying, playbackSpeed, maxYear, onYearSelect])
 
-  // Horizontal position clamp (12% to 82% to prevent overflow)
-  const vehicleProgressPct = maxYear > 0 ? (activeYear / maxYear) * 65 + 15 : 50
+  // Horizontal position clamp (12% to 78% to prevent overflow)
+  const vehicleProgressPct = maxYear > 0 ? (activeYear / maxYear) * 62 + 16 : 45
 
   // Environment styles
   const envStyles = {
@@ -285,7 +282,7 @@ export function AnimatedVehicleStage({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-white uppercase tracking-wider">{brand} Lifecycle Simulator</span>
+              <span className="text-xs font-black text-white uppercase tracking-wider">{brand} Simulator</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-cyan-300 border border-white/10 font-mono">
                 {vehicleType === 'bike' ? '🏍️ Motorcycle' : '🚗 Automotive'}
               </span>
@@ -583,18 +580,9 @@ export function AnimatedVehicleStage({
             }}
             style={{ transform: 'translateX(-50%)' }}
           >
-            {/* Vehicle Vector Graphic Container */}
+            {/* Vehicle Graphic Wrapper */}
             <div className="relative">
               
-              {/* Dynamic Headlight Light Cone */}
-              <div 
-                className="absolute top-7 left-24 w-44 h-12 pointer-events-none animate-beam"
-                style={{
-                  background: 'linear-gradient(90deg, rgba(255,255,255,0.45) 0%, rgba(34,211,238,0.2) 35%, transparent 100%)',
-                  clipPath: 'polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%)'
-                }}
-              />
-
               {/* Dynamic Neon Underglow */}
               <div 
                 className="absolute -bottom-1 left-4 right-4 h-3 rounded-full blur-md opacity-70 pointer-events-none"
@@ -615,156 +603,224 @@ export function AnimatedVehicleStage({
                 </div>
               )}
 
-              {/* VEHICLE RENDERING SELECTION */}
+              {/* ============================================================ */}
+              {/* VEHICLE RENDERING SELECTION                                  */}
+              {/* ============================================================ */}
               {vehicleType === 'bike' ? (
-                /* 🏍️ BICYCLE / MOTORCYCLE RENDERING */
-                <svg width="130" height="75" viewBox="0 0 130 75" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Chassis Frame */}
-                  <path d="M38 52 L56 36 L80 36 L94 50" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
-                  <path d="M56 36 L66 50 L46 50 Z" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
-                  
-                  {/* Engine Details */}
-                  <rect x="52" y="42" width="14" height="8" rx="2" fill="#475569" />
-                  <line x1="54" y1="44" x2="64" y2="44" stroke="#94a3b8" strokeWidth="1" />
-                  <line x1="54" y1="47" x2="64" y2="47" stroke="#94a3b8" strokeWidth="1" />
+                /* 🏍️ ACCURATE MOTORCYCLE VECTOR */
+                <div className="relative">
+                  {/* Headlight Beam from Front Lamp (x=98, y=32) */}
+                  <div 
+                    className="absolute top-8 left-24 w-44 h-12 pointer-events-none animate-beam"
+                    style={{
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.45) 0%, rgba(34,211,238,0.2) 35%, transparent 100%)',
+                      clipPath: 'polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%)'
+                    }}
+                  />
 
-                  {/* Body Geometry by Style */}
-                  {bodyStyle === 'sport' ? (
-                    /* Supersport Fairing */
-                    <path 
-                      d="M46 36 C52 26, 75 24, 88 34 L82 44 L50 42 Z" 
-                      fill={brandColor} 
-                      stroke="#ffffff" 
-                      strokeWidth="0.8" 
-                    />
-                  ) : bodyStyle === 'naked' ? (
-                    /* Naked Angular Tank */
-                    <path 
-                      d="M50 36 C54 30, 72 28, 80 34 L74 38 L52 38 Z" 
-                      fill={brandColor} 
-                      stroke="#ffffff" 
-                      strokeWidth="0.8" 
-                    />
-                  ) : (
-                    /* Classic Teardrop Cruiser Tank */
-                    <path 
-                      d="M50 35 C52 28, 70 27, 80 34 L72 38 L52 38 Z" 
-                      fill={brandColor} 
-                      stroke="#ffffff" 
-                      strokeWidth="0.8" 
-                    />
-                  )}
+                  <svg width="130" height="75" viewBox="0 0 130 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Chassis Frame & Engine */}
+                    <path d="M30 52 L56 36 L80 36 L98 52" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
+                    <path d="M56 36 L66 50 L46 50 Z" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
+                    
+                    {/* Engine Details */}
+                    <rect x="52" y="42" width="14" height="8" rx="2" fill="#475569" />
+                    <line x1="54" y1="44" x2="64" y2="44" stroke="#94a3b8" strokeWidth="1" />
+                    <line x1="54" y1="47" x2="64" y2="47" stroke="#94a3b8" strokeWidth="1" />
 
-                  {/* Seat & Pillion */}
-                  <path d="M40 35 C44 35, 50 36, 54 38 L42 41 Z" fill="#0f172a" />
-                  <rect x="38" y="33" width="18" height="4" rx="2" fill="#020617" />
+                    {/* Tank & Fairing by Style */}
+                    {bodyStyle === 'sport' ? (
+                      <path 
+                        d="M46 36 C52 26, 75 24, 88 34 L82 44 L50 42 Z" 
+                        fill={brandColor} 
+                        stroke="#ffffff" 
+                        strokeWidth="0.8" 
+                      />
+                    ) : bodyStyle === 'naked' ? (
+                      <path 
+                        d="M50 36 C54 30, 72 28, 80 34 L74 38 L52 38 Z" 
+                        fill={brandColor} 
+                        stroke="#ffffff" 
+                        strokeWidth="0.8" 
+                      />
+                    ) : (
+                      <path 
+                        d="M50 35 C52 28, 70 27, 80 34 L72 38 L52 38 Z" 
+                        fill={brandColor} 
+                        stroke="#ffffff" 
+                        strokeWidth="0.8" 
+                      />
+                    )}
 
-                  {/* Handlebars */}
-                  <path d="M78 35 L84 25 L91 26" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
-                  <circle cx="91" cy="26" r="2" fill="#38bdf8" />
+                    {/* Seat & Tail */}
+                    <path d="M40 35 C44 35, 50 36, 54 38 L42 41 Z" fill="#0f172a" />
+                    <rect x="38" y="33" width="18" height="4" rx="2" fill="#020617" />
 
-                  {/* Exhaust Pipe */}
-                  <path d="M58 50 C68 52, 42 54, 26 55" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
-                  <path d="M26 55 L20 55" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
+                    {/* Handlebars & Mirror */}
+                    <path d="M78 35 L84 25 L91 26" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
+                    <circle cx="91" cy="26" r="2" fill="#38bdf8" />
 
-                  {/* Rider Silhouette */}
-                  <g opacity="0.95">
-                    {/* Helmet */}
-                    <circle cx="70" cy="17" r="7" fill="#0f172a" stroke={brandColor} strokeWidth="1.5" />
-                    <path d="M73 16 Q77 17 76 19" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-                    {/* Torso */}
-                    <path d="M67 24 L56 35 L74 35 Z" fill="#1e293b" />
-                    {/* Arm to Handlebar */}
-                    <path d="M64 27 L82 29" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
-                  </g>
+                    {/* Exhaust Pipe */}
+                    <path d="M58 50 C68 52, 42 54, 26 55" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M26 55 L20 55" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
 
-                  {/* Rear Wheel (Spinning) */}
-                  <g className={isPlaying ? "animate-wheel-spin" : ""} style={{ transformOrigin: '30px 52px' }}>
-                    <circle cx="30" cy="52" r="15" stroke="#0f172a" strokeWidth="5" fill="#020617" />
-                    <circle cx="30" cy="52" r="11" stroke={brandColor} strokeWidth="1.5" strokeDasharray="4 3" fill="none" />
-                    <circle cx="30" cy="52" r="4" fill="#64748b" />
-                  </g>
+                    {/* Rider Silhouette */}
+                    <g opacity="0.95">
+                      <circle cx="70" cy="17" r="7" fill="#0f172a" stroke={brandColor} strokeWidth="1.5" />
+                      <path d="M73 16 Q77 17 76 19" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M67 24 L56 35 L74 35 Z" fill="#1e293b" />
+                      <path d="M64 27 L82 29" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+                    </g>
 
-                  {/* Front Wheel (Spinning) */}
-                  <g className={isPlaying ? "animate-wheel-spin" : ""} style={{ transformOrigin: '98px 52px' }}>
-                    <circle cx="98" cy="52" r="15" stroke="#0f172a" strokeWidth="5" fill="#020617" />
-                    <circle cx="98" cy="52" r="11" stroke={brandColor} strokeWidth="1.5" strokeDasharray="4 3" fill="none" />
-                    <circle cx="98" cy="52" r="4" fill="#64748b" />
-                  </g>
+                    {/* Rear Wheel (Zero-Centered Transform) */}
+                    <g transform="translate(30, 52)">
+                      <circle cx="0" cy="0" r="14" stroke="#0f172a" strokeWidth="5" fill="#020617" />
+                      <g className={isPlaying ? "animate-wheel-spin" : ""}>
+                        <circle cx="0" cy="0" r="10" stroke={brandColor} strokeWidth="1.5" strokeDasharray="4 3" fill="none" />
+                        <line x1="-8" y1="0" x2="8" y2="0" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <line x1="0" y1="-8" x2="0" y2="8" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <circle cx="0" cy="0" r="3.5" fill="#64748b" />
+                      </g>
+                    </g>
 
-                  {/* Front Headlight */}
-                  <circle cx="94" cy="32" r="3" fill="#ffffff" />
-                </svg>
+                    {/* Front Wheel (Zero-Centered Transform) */}
+                    <g transform="translate(98, 52)">
+                      <circle cx="0" cy="0" r="14" stroke="#0f172a" strokeWidth="5" fill="#020617" />
+                      <g className={isPlaying ? "animate-wheel-spin" : ""}>
+                        <circle cx="0" cy="0" r="10" stroke={brandColor} strokeWidth="1.5" strokeDasharray="4 3" fill="none" />
+                        <line x1="-8" y1="0" x2="8" y2="0" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <line x1="0" y1="-8" x2="0" y2="8" stroke="#cbd5e1" strokeWidth="1.2" />
+                        <circle cx="0" cy="0" r="3.5" fill="#64748b" />
+                      </g>
+                    </g>
+
+                    {/* Front Headlight Bulb */}
+                    <circle cx="94" cy="32" r="3" fill="#ffffff" />
+                  </svg>
+                </div>
               ) : (
-                /* 🚗 AUTOMOTIVE CAR / SUV RENDERING */
-                <svg width="150" height="70" viewBox="0 0 150 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {bodyStyle === 'offroad' ? (
-                    /* 🛻 Rugged Boxy 4x4 */
-                    <>
-                      <path 
-                        d="M15 48 L15 32 L35 32 L48 20 L98 20 L115 32 L142 38 L142 50 L15 50 Z" 
-                        fill={brandColor} 
-                        stroke="#ffffff" 
-                        strokeWidth="0.8" 
-                      />
-                      {/* Roof Rack */}
-                      <line x1="50" y1="17" x2="96" y2="17" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="60" y1="17" x2="60" y2="20" stroke="#94a3b8" strokeWidth="1.5" />
-                      <line x1="85" y1="17" x2="85" y2="20" stroke="#94a3b8" strokeWidth="1.5" />
-                      {/* Windows */}
-                      <path d="M50 22 L95 22 L110 32 L38 32 Z" fill="#0f172a" stroke="#334155" strokeWidth="1" />
-                    </>
-                  ) : bodyStyle === 'suv' ? (
-                    /* 🚙 Compact SUV Crossover */
-                    <>
-                      <path 
-                        d="M15 46 L22 36 L44 22 L94 22 L120 34 L142 40 L142 50 L15 50 Z" 
-                        fill={brandColor} 
-                        stroke="#ffffff" 
-                        strokeWidth="0.8" 
-                      />
-                      {/* Roof Rails */}
-                      <line x1="52" y1="19" x2="90" y2="19" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" />
-                      {/* Windows */}
-                      <path d="M46 24 L92 24 L114 34 L40 34 Z" fill="#0f172a" stroke="#334155" strokeWidth="1" />
-                    </>
-                  ) : (
-                    /* 🚗 Aerodynamic Sleek Sedan */
-                    <>
-                      <path 
-                        d="M15 45 L26 38 L48 24 L92 24 L118 36 L140 40 L142 49 L15 49 Z" 
-                        fill={brandColor} 
-                        stroke="#ffffff" 
-                        strokeWidth="0.8" 
-                      />
-                      {/* Windows */}
-                      <path d="M50 26 L90 26 L112 36 L48 36 Z" fill="#0f172a" stroke="#334155" strokeWidth="1" />
-                    </>
-                  )}
+                /* 🚗 HANDCRAFTED AUTOMOTIVE CAR / SUV VECTOR */
+                <div className="relative">
+                  {/* Headlight Beam from Front Bumper Nose (x=144, y=42) */}
+                  <div 
+                    className="absolute top-9 left-36 w-48 h-12 pointer-events-none animate-beam"
+                    style={{
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.5) 0%, rgba(34,211,238,0.25) 35%, transparent 100%)',
+                      clipPath: 'polygon(0% 45%, 100% 0%, 100% 100%, 0% 55%)'
+                    }}
+                  />
 
-                  {/* Headlight & Taillight */}
-                  <path d="M136 41 L142 42 L140 46 Z" fill="#ffffff" />
-                  <path d="M15 42 L18 42 L17 46 Z" fill="#f43f5e" />
+                  <svg width="156" height="70" viewBox="0 0 156 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="bodyPaintGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
+                        <stop offset="30%" stopColor={brandColor} stopOpacity="1" />
+                        <stop offset="100%" stopColor="#0f172a" stopOpacity="1" />
+                      </linearGradient>
+                      <linearGradient id="glassGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#1e293b" />
+                        <stop offset="100%" stopColor="#020617" />
+                      </linearGradient>
+                    </defs>
 
-                  {/* Character Lines & Door Handles */}
-                  <path d="M32 42 L125 42" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1" />
-                  <rect x="56" y="38" width="6" height="1.5" rx="0.5" fill="#020617" />
-                  <rect x="86" y="38" width="6" height="1.5" rx="0.5" fill="#020617" />
+                    {/* Dynamic Body Silhouette by Style */}
+                    {bodyStyle === 'offroad' ? (
+                      /* 🛻 Rugged 4x4 with Wheel Arches */
+                      <>
+                        {/* Body with carved wheel arches */}
+                        <path 
+                          d="M12 48 L12 32 L34 32 L46 18 L100 18 L118 32 L146 36 L148 48 L134 48 A 16 16 0 0 0 102 48 L54 48 A 16 16 0 0 0 22 48 Z" 
+                          fill="url(#bodyPaintGradient)" 
+                          stroke="#ffffff" 
+                          strokeWidth="0.8" 
+                        />
+                        {/* Roof Rack */}
+                        <line x1="48" y1="15" x2="98" y2="15" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
+                        <line x1="58" y1="15" x2="58" y2="18" stroke="#94a3b8" strokeWidth="2" />
+                        <line x1="88" y1="15" x2="88" y2="18" stroke="#94a3b8" strokeWidth="2" />
+                        {/* Tinted Windows */}
+                        <path d="M48 20 L96 20 L112 32 L36 32 Z" fill="url(#glassGradient)" stroke="#334155" strokeWidth="1" />
+                        <line x1="72" y1="20" x2="72" y2="32" stroke="#475569" strokeWidth="2" />
+                      </>
+                    ) : bodyStyle === 'suv' ? (
+                      /* 🚙 Modern Compact SUV */
+                      <>
+                        <path 
+                          d="M12 48 L22 36 L44 20 L98 20 L122 34 L146 38 L148 48 L134 48 A 16 16 0 0 0 102 48 L54 48 A 16 16 0 0 0 22 48 Z" 
+                          fill="url(#bodyPaintGradient)" 
+                          stroke="#ffffff" 
+                          strokeWidth="0.8" 
+                        />
+                        {/* Roof Rails */}
+                        <line x1="50" y1="17" x2="94" y2="17" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
+                        {/* Windows */}
+                        <path d="M46 22 L94 22 L116 34 L38 34 Z" fill="url(#glassGradient)" stroke="#334155" strokeWidth="1" />
+                        <line x1="74" y1="22" x2="74" y2="34" stroke="#475569" strokeWidth="2" />
+                      </>
+                    ) : (
+                      /* 🚗 Aerodynamic Luxury Sedan */
+                      <>
+                        <path 
+                          d="M12 48 L25 38 L48 22 L94 22 L120 34 L144 38 L148 48 L134 48 A 16 16 0 0 0 102 48 L54 48 A 16 16 0 0 0 22 48 Z" 
+                          fill="url(#bodyPaintGradient)" 
+                          stroke="#ffffff" 
+                          strokeWidth="0.8" 
+                        />
+                        {/* Windows */}
+                        <path d="M50 24 L92 24 L114 34 L44 34 Z" fill="url(#glassGradient)" stroke="#334155" strokeWidth="1" />
+                        <line x1="72" y1="24" x2="72" y2="34" stroke="#475569" strokeWidth="2" />
+                      </>
+                    )}
 
-                  {/* Rear Wheel (Spinning) */}
-                  <g className={isPlaying ? "animate-wheel-spin" : ""} style={{ transformOrigin: '40px 50px' }}>
-                    <circle cx="40" cy="50" r="13" stroke="#020617" strokeWidth="5" fill="#0f172a" />
-                    <circle cx="40" cy="50" r="9" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" fill="none" />
-                    <circle cx="40" cy="50" r="4" fill="#cbd5e1" />
-                  </g>
+                    {/* Aerodynamic Side Character Crease */}
+                    <path d="M28 40 L136 40" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1" />
+                    
+                    {/* Door Handles */}
+                    <rect x="58" y="36" width="7" height="1.8" rx="0.8" fill="#020617" />
+                    <rect x="88" y="36" width="7" height="1.8" rx="0.8" fill="#020617" />
 
-                  {/* Front Wheel (Spinning) */}
-                  <g className={isPlaying ? "animate-wheel-spin" : ""} style={{ transformOrigin: '116px 50px' }}>
-                    <circle cx="116" cy="50" r="13" stroke="#020617" strokeWidth="5" fill="#0f172a" />
-                    <circle cx="116" cy="50" r="9" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" fill="none" />
-                    <circle cx="116" cy="50" r="4" fill="#cbd5e1" />
-                  </g>
-                </svg>
+                    {/* Side Mirror */}
+                    <path d="M112 33 L118 31 L118 35 Z" fill="#0f172a" stroke="#ffffff" strokeWidth="0.5" />
+
+                    {/* Front Projector Headlight */}
+                    <path d="M140 39 L147 40 L145 44 Z" fill="#ffffff" />
+                    <circle cx="143" cy="42" r="1.5" fill="#38bdf8" />
+
+                    {/* Rear LED Taillight Bar */}
+                    <path d="M12 40 L16 40 L15 44 Z" fill="#f43f5e" />
+                    <circle cx="14" cy="42" r="1.2" fill="#ff4d4d" />
+
+                    {/* Rear Wheel Assembly (Zero-Centered Math Pivot cx=38, cy=48) */}
+                    <g transform="translate(38, 48)">
+                      {/* Black Rubber Tire */}
+                      <circle cx="0" cy="0" r="13" stroke="#020617" strokeWidth="4.5" fill="#0f172a" />
+                      {/* Spinning Alloy Spoke Rim */}
+                      <g className={isPlaying ? "animate-wheel-spin" : ""}>
+                        <circle cx="0" cy="0" r="9" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
+                        <line x1="-7" y1="0" x2="7" y2="0" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="0" y1="-7" x2="0" y2="7" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-5" y1="-5" x2="5" y2="5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-5" y1="5" x2="5" y2="-5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <circle cx="0" cy="0" r="3" fill="#cbd5e1" />
+                      </g>
+                    </g>
+
+                    {/* Front Wheel Assembly (Zero-Centered Math Pivot cx=118, cy=48) */}
+                    <g transform="translate(118, 48)">
+                      {/* Black Rubber Tire */}
+                      <circle cx="0" cy="0" r="13" stroke="#020617" strokeWidth="4.5" fill="#0f172a" />
+                      {/* Spinning Alloy Spoke Rim */}
+                      <g className={isPlaying ? "animate-wheel-spin" : ""}>
+                        <circle cx="0" cy="0" r="9" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
+                        <line x1="-7" y1="0" x2="7" y2="0" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="0" y1="-7" x2="0" y2="7" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-5" y1="-5" x2="5" y2="5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <line x1="-5" y1="5" x2="5" y2="-5" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <circle cx="0" cy="0" r="3" fill="#cbd5e1" />
+                      </g>
+                    </g>
+                  </svg>
+                </div>
               )}
             </div>
           </motion.div>
