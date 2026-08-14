@@ -1,291 +1,51 @@
-"""Define, train, and compare multiple regression models."""
+"""Model classes and ensemble architectures for AutoValuate AI."""
 
-from __future__ import annotations
-
-from typing import Dict, List, Tuple
-
+import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import (
-    GradientBoostingRegressor,
-    RandomForestRegressor,
-    VotingRegressor,
-)
-from sklearn.linear_model import Lasso, LinearRegression, Ridge
-from sklearn.model_selection import RandomizedSearchCV, cross_val_score
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
-
-from src.feature_engineering import DERIVED_NUMERIC_FEATURES, add_derived_features
-
-try:
-    from xgboost import XGBRegressor
-
-    HAS_XGBOOST = True
-except ImportError:
-    HAS_XGBOOST = False
 
 
-# ── Configuration ──────────────────────────────────────────────
-DEFAULT_RANDOM_STATE = 42
+class StackingEnsembleModel:
+    """Ensemble combining CatBoost, XGBoost, and LightGBM with tree-based weighted blend."""
 
+    def __init__(
+        self,
+        cat_model,
+        xgb_model,
+        lgb_model=None,
+        weights=(0.6, 0.4, 0.0),
+        categorical_features=None,
+    ):
+        self.cat_model = cat_model
+        self.xgb_model = xgb_model
+        self.lgb_model = lgb_model
+        self.weights = weights
+        self.categorical_features = categorical_features or []
 
-# ── Model registry ─────────────────────────────────────────────
+    def predict(self, X):
+        X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
 
+        # Format types for CatBoost / LightGBM
+        for col in self.categorical_features:
+            if col in X_df.columns:
+                X_df[col] = X_df[col].astype(str)
 
-def get_models() -> Dict[str, object]:
-    """Return a dict of model_name → estimator."""
-    models = {
-        "LinearRegression": LinearRegression(),
-        "Ridge": Ridge(alpha=1.0),
-        "Lasso": Lasso(alpha=1.0, max_iter=5000),
-        "RandomForest": RandomForestRegressor(
-            n_estimators=200,
-            max_depth=15,
-            min_samples_leaf=5,
-            random_state=DEFAULT_RANDOM_STATE,
-            n_jobs=-1,
-        ),
-        "GradientBoosting": GradientBoostingRegressor(
-            n_estimators=200,
-            max_depth=5,
-            learning_rate=0.1,
-            min_samples_leaf=5,
-            random_state=DEFAULT_RANDOM_STATE,
-        ),
-    }
+        # CatBoost prediction
+        cat_preds = self.cat_model.predict(X_df)
 
-    if HAS_XGBOOST:
-        models["XGBoost"] = XGBRegressor(
-            n_estimators=200,
-            max_depth=5,
-            learning_rate=0.1,
-            min_child_weight=5,
-            random_state=DEFAULT_RANDOM_STATE,
-            verbosity=0,
+        # XGB / LGB encoded predictions
+        X_encoded = pd.get_dummies(
+            X_df, columns=self.categorical_features, drop_first=True
         )
 
-        # Weighted blend improves robustness across price segments.
-        models["BlendEnsemble"] = VotingRegressor(
-            [
-                (
-                    "xgb",
-                    XGBRegressor(
-                        n_estimators=300,
-                        max_depth=3,
-                        learning_rate=0.2,
-                        min_child_weight=1,
-                        random_state=DEFAULT_RANDOM_STATE,
-                        verbosity=0,
-                    ),
-                ),
-                (
-                    "gb",
-                    GradientBoostingRegressor(
-                        n_estimators=200,
-                        max_depth=5,
-                        learning_rate=0.1,
-                        min_samples_leaf=5,
-                        random_state=DEFAULT_RANDOM_STATE,
-                    ),
-                ),
-            ],
-            weights=[0.7, 0.3],
-        )
+        # Align columns
+        if hasattr(self.xgb_model, "feature_names_in_"):
+            for c in self.xgb_model.feature_names_in_:
+                if c not in X_encoded.columns:
+                    X_encoded[c] = 0
+            X_encoded_xgb = X_encoded[self.xgb_model.feature_names_in_]
+            xgb_preds = self.xgb_model.predict(X_encoded_xgb)
+        else:
+            xgb_preds = cat_preds
 
-    return models
-
-
-# ── Pipeline builder ────────────────────────────────────────────
-
-
-def build_pipeline(
-    model: object,
-    categorical_features: List[str],
-    numeric_features: List[str],
-    use_derived_features: bool = True,
-) -> Pipeline:
-    """Wrap a model in a preprocessing + model pipeline.
-
-    Preprocessing:
-    - OneHotEncoder for categorical (handle_unknown='ignore')
-    - StandardScaler for numeric
-    """
-    expanded_numeric = list(numeric_features)
-    if use_derived_features:
-        expanded_numeric += [
-            f for f in DERIVED_NUMERIC_FEATURES if f not in expanded_numeric
-        ]
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            (
-                "cat",
-                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
-                categorical_features,
-            ),
-            ("num", StandardScaler(), expanded_numeric),
-        ],
-        remainder="passthrough",
-    )
-
-    steps = []
-    if use_derived_features:
-        steps.append(
-            (
-                "feature_engineering",
-                FunctionTransformer(add_derived_features, validate=False),
-            )
-        )
-    steps.extend(
-        [
-            ("preprocessor", preprocessor),
-            ("model", model),
-        ]
-    )
-    return Pipeline(steps=steps)
-
-
-# ── Training & comparison ──────────────────────────────────────
-
-
-def train_and_compare(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    categorical_features: List[str],
-    numeric_features: List[str],
-    cv_folds: int = 5,
-) -> Tuple[Dict[str, Pipeline], pd.DataFrame]:
-    """Train all models with cross-validation and return fitted pipelines + scores.
-
-    Returns
-    -------
-    pipelines : dict of name → fitted Pipeline
-    cv_results : DataFrame with columns [model, cv_mean_r2, cv_std_r2, cv_mean_mae]
-    """
-    models = get_models()
-    pipelines = {}
-    results = []
-
-    print("\n" + "=" * 60)
-    print("  MODEL TRAINING & CROSS-VALIDATION")
-    print("=" * 60)
-
-    for name, model in models.items():
-        use_derived = name in {"LinearRegression", "Ridge", "Lasso"}
-        variant = "derived" if use_derived else "base"
-        print(f"\n  Training {name} ({variant})...", end=" ", flush=True)
-
-        pipe = build_pipeline(
-            model,
-            categorical_features,
-            numeric_features,
-            use_derived_features=use_derived,
-        )
-
-        # Cross-validation scores
-        r2_scores = cross_val_score(
-            pipe, X_train, y_train, cv=cv_folds, scoring="r2", n_jobs=-1
-        )
-        mae_scores = cross_val_score(
-            pipe,
-            X_train,
-            y_train,
-            cv=cv_folds,
-            scoring="neg_mean_absolute_error",
-            n_jobs=-1,
-        )
-
-        # Fit on full training set
-        pipe.fit(X_train, y_train)
-        pipelines[name] = pipe
-
-        cv_r2_mean = r2_scores.mean()
-        cv_r2_std = r2_scores.std()
-        cv_mae_mean = -mae_scores.mean()  # neg_mae → positive
-
-        results.append(
-            {
-                "model": name,
-                "cv_mean_r2": cv_r2_mean,
-                "cv_std_r2": cv_r2_std,
-                "cv_mean_mae": cv_mae_mean,
-            }
-        )
-
-        print(f"R²={cv_r2_mean:.4f} (±{cv_r2_std:.4f}), MAE=₹{cv_mae_mean:,.0f}")
-
-    cv_results = pd.DataFrame(results).sort_values("cv_mean_r2", ascending=False)
-
-    print("\n" + "-" * 60)
-    best = cv_results.iloc[0]
-    print(f"  Best model: {best['model']}  (R²={best['cv_mean_r2']:.4f})")
-    print("=" * 60 + "\n")
-
-    return pipelines, cv_results
-
-
-def get_best_model(
-    pipelines: Dict[str, Pipeline],
-    cv_results: pd.DataFrame,
-) -> Tuple[str, Pipeline]:
-    """Return the name and pipeline of the best model by CV R²."""
-    best_name = cv_results.iloc[0]["model"]
-    return best_name, pipelines[best_name]
-
-
-def tune_best_model(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    best_name: str,
-    best_pipe: Pipeline,
-) -> Pipeline:
-    """Run hyperparameter tuning on the best model.
-    Only supports tree-based models right now.
-    """
-    if best_name not in ["GradientBoosting", "XGBoost", "RandomForest"]:
-        print(
-            f"  Skipping tuning for {best_name} — currently only tree models are tuned."
-        )
-        return best_pipe
-
-    print(f"\n  Tuning {best_name}...")
-
-    param_grid = {}
-    if best_name == "GradientBoosting":
-        param_grid = {
-            "model__learning_rate": [0.01, 0.05, 0.1, 0.2],
-            "model__max_depth": [3, 5, 7],
-            "model__n_estimators": [100, 200, 300],
-            "model__min_samples_leaf": [2, 5, 10],
-        }
-    elif best_name == "XGBoost":
-        param_grid = {
-            "model__learning_rate": [0.01, 0.05, 0.1, 0.2],
-            "model__max_depth": [3, 5, 7],
-            "model__n_estimators": [100, 200, 300],
-            "model__min_child_weight": [1, 3, 5],
-        }
-    elif best_name == "RandomForest":
-        param_grid = {
-            "model__max_depth": [10, 15, 20, None],
-            "model__n_estimators": [100, 200, 300],
-            "model__min_samples_leaf": [2, 5, 10],
-        }
-
-    search = RandomizedSearchCV(
-        best_pipe,
-        param_distributions=param_grid,
-        n_iter=10,  # 10 random combinations
-        cv=3,  # 3-fold CV for speed
-        scoring="r2",
-        n_jobs=-1,
-        random_state=DEFAULT_RANDOM_STATE,
-    )
-
-    search.fit(X_train, y_train)
-
-    print(f"  Tuned R²: {search.best_score_:.4f}")
-    print(f"  Best params: {search.best_params_}")
-
-    return search.best_estimator_
+        w_cat, w_xgb, w_lgb = self.weights
+        return (w_cat * np.array(cat_preds)) + ((1.0 - w_cat) * np.array(xgb_preds))

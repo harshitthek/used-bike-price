@@ -58,6 +58,12 @@ from src.contracts import (
 from src.feature_engineering import DERIVED_NUMERIC_FEATURES
 from src.logging_config import setup_logging
 
+try:
+    from src.models import StackingEnsembleModel
+except ImportError:
+    StackingEnsembleModel = None
+
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 

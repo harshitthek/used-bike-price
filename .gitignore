@@ -9,6 +9,8 @@ __pycache__/
 *$py.class
 .pytest_cache/
 .ipynb_checkpoints/
+catboost_info/
+
 
 # Node/Frontend
 node_modules/

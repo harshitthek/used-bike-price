@@ -5,6 +5,9 @@ joblib
 matplotlib
 seaborn
 xgboost==3.2.0
+lightgbm
+catboost
+shap
 fastapi
 uvicorn
 pydantic
