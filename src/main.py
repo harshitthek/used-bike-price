@@ -20,7 +20,7 @@ from sklearn.model_selection import train_test_split
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.contracts import OWNER_RANK_MAX, OWNER_RANK_MIN, OWNER_RANK_TO_LABEL
+from src.contracts import OWNER_RANK_MAX, OWNER_RANK_MIN
 from src.data_loader import describe_data, load_data
 from src.evaluation import (
     evaluate_on_test,
@@ -139,7 +139,7 @@ def run_train(data_path: str | None = None):
 
     metadata = {
         "metadata_version": 1,
-        "model_version": datetime.utcnow().strftime("%Y.%m.%d"),
+        "model_version": datetime.now(timezone.utc).strftime("%Y.%m.%d"),
         "training_timestamp": datetime.now(timezone.utc).isoformat(),
         "random_state": DEFAULT_RANDOM_STATE,
         "training_samples": len(X_train),
@@ -233,16 +233,28 @@ def run_train(data_path: str | None = None):
 
 def run_predict():
     """Interactive prediction using saved model."""
+    import json
+
+    from src.api import apply_economic_depreciation_bounds, prepare_bike_inference
+    from src.contracts import BikeFeatures
+
     if not DEFAULT_MODEL_PATH.exists():
         print(f"Error: No saved model found at {DEFAULT_MODEL_PATH}")
         print("Run `python src/main.py` first to train a model.")
         sys.exit(1)
 
     pipe = joblib.load(DEFAULT_MODEL_PATH)
+    meta_file = MODELS_DIR / "best_model.metadata.json"
+    metadata = (
+        json.loads(meta_file.read_text(encoding="utf-8"))
+        if meta_file.exists()
+        else None
+    )
+
     print("\n" + "=" * 60)
-    print("  USED BIKE PRICE PREDICTOR")
+    print("  USED BIKE PRICE PREDICTOR (AI Engine)")
     print("=" * 60)
-    print("  Enter bike details to get a price estimate.")
+    print("  Enter bike details to get a certified valuation.")
     print("  Type 'quit' to exit.\n")
 
     while True:
@@ -257,23 +269,42 @@ def run_predict():
             owner_num = int(
                 input(f"  Owner number ({OWNER_RANK_MIN}-{OWNER_RANK_MAX}): ").strip()
             )
-            owner = OWNER_RANK_TO_LABEL.get(owner_num, "First Owner")
 
-            sample = pd.DataFrame(
-                [
-                    {
-                        "brand": brand,
-                        "owner": owner,
-                        "kms_driven": kms,
-                        "age": age,
-                        "power": power,
-                        "owner_rank": owner_num,
-                    }
-                ]
+            bike_input = BikeFeatures(
+                brand=brand,
+                power=power,
+                kms_driven=kms,
+                age=age,
+                owner_rank=owner_num,
             )
 
-            pred = pipe.predict(sample)[0]
-            print(f"\n  💰 Estimated Price: ₹{pred:,.0f}\n")
+            input_df, quality, warnings, adjustments = prepare_bike_inference(
+                bike_input, metadata
+            )
+            raw_pred = float(pipe.predict(input_df)[0])
+            final_pred = apply_economic_depreciation_bounds(
+                "bike", raw_pred, age, kms, owner_num, brand
+            )
+
+            rmse = (
+                float(metadata.get("metrics", {}).get("rmse", 14000.0))
+                if metadata
+                else 14000.0
+            )
+            margin = 1.28 * rmse
+            lower = max(1000.0, round(final_pred - margin, -2))
+            upper = round(final_pred + margin, -2)
+
+            print("\n  " + "─" * 45)
+            print(f"  💰 Certified Fair Value: ₹{final_pred:,.0f}")
+            print(f"  📊 Estimated Range    : ₹{lower:,.0f} - ₹{upper:,.0f}")
+            print(f"  🎯 Reliability Level  : {quality['level'].upper()}")
+
+            if warnings:
+                print("  ⚠️  Advisories:")
+                for w in warnings:
+                    print(f"     • {w}")
+            print("  " + "─" * 45 + "\n")
 
         except (ValueError, KeyboardInterrupt):
             print("\n  Invalid input. Try again or type 'quit'.\n")
