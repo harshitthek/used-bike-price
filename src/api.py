@@ -51,6 +51,7 @@ from src.contracts import (
     CAR_KMS_MIN,
     CAR_PREDICTION_FEATURES,
     CAR_TRANSMISSION_TYPES,
+    DEFAULT_FUEL_PRICES,
     KMS_MAX,
     KMS_MIN,
     OWNER_RANK_MAX,
@@ -394,6 +395,72 @@ class BatchPredictionSummary(BaseModel):
 class BatchPredictionResponse(BaseModel):
     summary: BatchPredictionSummary
     predictions: List[PredictionResponse]
+
+
+# ── LIFECYCLE SIMULATION SCHEMAS ───────────────────────────────────
+
+
+class SimulationRequest(BaseModel):
+    vehicle_type: Literal["bike", "car"] = "bike"
+    brand: str = Field(..., json_schema_extra={"example": "Royal Enfield"})
+    power: Optional[float] = Field(None, json_schema_extra={"example": 350.0})
+    engine_cc: Optional[float] = Field(None, json_schema_extra={"example": 1197.0})
+    max_power_bhp: Optional[float] = Field(None, json_schema_extra={"example": 82.0})
+    fuel: str = Field("Petrol", json_schema_extra={"example": "Petrol"})
+    transmission: str = Field("Manual", json_schema_extra={"example": "Manual"})
+    purchase_price: Optional[float] = Field(
+        None, description="Purchase price or original showroom price (INR)"
+    )
+    current_age: float = Field(0.0, ge=0.0, le=25.0)
+    current_kms: float = Field(0.0, ge=0.0, le=500000.0)
+    owner_rank: int = Field(1, ge=1, le=5)
+    horizon_years: int = Field(5, ge=1, le=10)
+    annual_kms: float = Field(10000.0, ge=1000.0, le=60000.0)
+    custom_fuel_price: Optional[float] = Field(None, ge=1.0, le=300.0)
+    custom_mileage_kml: Optional[float] = Field(None, ge=1.0, le=100.0)
+
+
+class YearlySimulationPoint(BaseModel):
+    year: int
+    calendar_year: int
+    total_kms: float
+    resale_value: float
+    retention_rate: float
+    depreciation_loss: float
+    annual_fuel_cost: float
+    annual_maintenance: float
+    annual_insurance: float
+    annual_operating_cost: float
+    cumulative_operating_cost: float
+    cumulative_tco: float
+    net_cost_per_km: float
+    monthly_effective_cost: float
+
+
+class SimulationScenario(BaseModel):
+    name: str
+    annual_kms: float
+    sell_year: int
+    final_resale: float
+    total_spent: float
+    net_cost_per_km: float
+    monthly_burn: float
+    summary: str
+
+
+class SimulationResponse(BaseModel):
+    success: bool = True
+    vehicle: dict
+    initial_price: float
+    horizon_years: int
+    annual_kms: float
+    fuel_type: str
+    mileage_kml: float
+    fuel_price_per_unit: float
+    timeline: List[YearlySimulationPoint]
+    summary: dict
+    optimal_sell_window: dict
+    scenarios: List[SimulationScenario]
 
 
 # ── INFERENCE INPUT PREPARATION ─────────────────────────────────────
@@ -1399,6 +1466,320 @@ def demo_widget_script():
 """
 
     return Response(content=script_content, media_type="application/javascript")
+
+
+# ── LIFECYCLE SIMULATION ENGINE ────────────────────────────────────
+
+
+def calculate_lifecycle_simulation(req: SimulationRequest) -> SimulationResponse:
+    v_type = req.vehicle_type
+    brand = req.brand
+    power_disp = (
+        req.power
+        if req.power is not None
+        else (
+            req.engine_cc
+            if req.engine_cc is not None
+            else (350.0 if v_type == "bike" else 1197.0)
+        )
+    )
+    bhp_val = req.max_power_bhp or (
+        power_disp * 0.075 + 10.0 if v_type == "car" else 20.0
+    )
+    fuel = req.fuel if v_type == "car" else "Petrol"
+    trans = req.transmission if v_type == "car" else "Manual"
+
+    model, metadata = get_model(v_type)
+    if model is None:
+        raise HTTPException(
+            status_code=503, detail="Model is loading. Try again in 2 seconds."
+        )
+
+    # Determine fuel economy and fuel price
+    if req.custom_fuel_price is not None:
+        fuel_price = req.custom_fuel_price
+    else:
+        fuel_price = DEFAULT_FUEL_PRICES.get(fuel, 102.0)
+
+    if req.custom_mileage_kml is not None:
+        mileage_kml = req.custom_mileage_kml
+    else:
+        if v_type == "bike":
+            if power_disp >= 500:
+                mileage_kml = 25.0
+            elif power_disp >= 300:
+                mileage_kml = 35.0
+            elif power_disp >= 150:
+                mileage_kml = 45.0
+            else:
+                mileage_kml = 60.0
+        else:
+            if fuel == "Electric":
+                mileage_kml = 1.0
+            elif fuel == "Diesel":
+                mileage_kml = 18.0
+            elif fuel == "CNG":
+                mileage_kml = 24.0
+            else:
+                mileage_kml = 15.0
+
+    # Baseline Price (Year 0)
+    eval_p0 = UniversalVehicleInput(
+        vehicle_type=v_type,
+        brand=brand,
+        power=power_disp,
+        engine_cc=power_disp,
+        max_power_bhp=bhp_val,
+        fuel=fuel,
+        transmission=trans,
+        kms_driven=req.current_kms,
+        age=req.current_age,
+        owner_rank=req.owner_rank,
+    )
+    if v_type == "car":
+        df0, _, _, _ = prepare_car_inference(eval_p0, metadata)
+    else:
+        df0, _, _, _ = prepare_bike_inference(eval_p0, metadata)
+    raw_p0 = float(model.predict(df0)[0])
+    p0_market = apply_economic_depreciation_bounds(
+        v_type, raw_p0, req.current_age, req.current_kms, req.owner_rank, brand
+    )
+
+    initial_price = req.purchase_price if req.purchase_price is not None else p0_market
+
+    # Simulate year by year
+    timeline: List[YearlySimulationPoint] = []
+    cum_operating = 0.0
+    current_year = datetime.now(timezone.utc).year
+
+    # Point 0
+    timeline.append(
+        YearlySimulationPoint(
+            year=0,
+            calendar_year=current_year,
+            total_kms=round(req.current_kms, 0),
+            resale_value=round(p0_market, 0),
+            retention_rate=100.0,
+            depreciation_loss=0.0,
+            annual_fuel_cost=0.0,
+            annual_maintenance=0.0,
+            annual_insurance=0.0,
+            annual_operating_cost=0.0,
+            cumulative_operating_cost=0.0,
+            cumulative_tco=0.0,
+            net_cost_per_km=0.0,
+            monthly_effective_cost=0.0,
+        )
+    )
+
+    prev_resale = p0_market
+
+    for t in range(1, req.horizon_years + 1):
+        age_t = req.current_age + t
+        kms_t = req.current_kms + (t * req.annual_kms)
+        eval_pt = UniversalVehicleInput(
+            vehicle_type=v_type,
+            brand=brand,
+            power=power_disp,
+            engine_cc=power_disp,
+            max_power_bhp=bhp_val,
+            fuel=fuel,
+            transmission=trans,
+            kms_driven=kms_t,
+            age=age_t,
+            owner_rank=req.owner_rank,
+        )
+
+        if v_type == "car":
+            df_t, _, _, _ = prepare_car_inference(eval_pt, metadata)
+        else:
+            df_t, _, _, _ = prepare_bike_inference(eval_pt, metadata)
+
+        raw_pt = float(model.predict(df_t)[0])
+        resale_t = apply_economic_depreciation_bounds(
+            v_type, raw_pt, age_t, kms_t, req.owner_rank, brand
+        )
+
+        # Ensure realistic monotonically non-increasing resale
+        resale_t = min(resale_t, prev_resale * 0.98)
+        prev_resale = resale_t
+
+        # Operating expenses
+        if fuel == "Electric":
+            annual_fuel = req.annual_kms * 1.80
+        else:
+            annual_fuel = (req.annual_kms / mileage_kml) * fuel_price
+
+        # Annual Insurance
+        idv_val = max(10000.0, resale_t * 0.90)
+        annual_ins = (idv_val * 0.031) + (1500.0 if v_type == "bike" else 3800.0)
+
+        # Annual Maintenance
+        base_maint_rate = 0.38 if v_type == "bike" else 1.15
+        age_maint_factor = 1.0 + (0.07 * age_t)
+        annual_maint = req.annual_kms * base_maint_rate * age_maint_factor
+
+        annual_operating = annual_fuel + annual_ins + annual_maint
+        cum_operating += annual_operating
+
+        deprec_loss = max(0.0, initial_price - resale_t)
+        cum_tco = deprec_loss + cum_operating
+        total_kms_driven = t * req.annual_kms
+        cost_per_km = cum_tco / total_kms_driven if total_kms_driven > 0 else 0.0
+        monthly_cost = cum_tco / (t * 12.0)
+        retention = (resale_t / initial_price) * 100.0 if initial_price > 0 else 0.0
+
+        timeline.append(
+            YearlySimulationPoint(
+                year=t,
+                calendar_year=current_year + t,
+                total_kms=round(kms_t, 0),
+                resale_value=round(resale_t, 0),
+                retention_rate=round(retention, 1),
+                depreciation_loss=round(deprec_loss, 0),
+                annual_fuel_cost=round(annual_fuel, 0),
+                annual_maintenance=round(annual_maint, 0),
+                annual_insurance=round(annual_ins, 0),
+                annual_operating_cost=round(annual_operating, 0),
+                cumulative_operating_cost=round(cum_operating, 0),
+                cumulative_tco=round(cum_tco, 0),
+                net_cost_per_km=round(cost_per_km, 2),
+                monthly_effective_cost=round(monthly_cost, 0),
+            )
+        )
+
+    # Optimal Liquidation Window
+    opt_year = min(req.horizon_years, 3 if v_type == "bike" else 4)
+    opt_point = timeline[opt_year]
+
+    optimal_sell_window = {
+        "recommended_sell_year": opt_year,
+        "recommended_calendar_year": current_year + opt_year,
+        "recommended_odometer": opt_point.total_kms,
+        "projected_liquidation_price": opt_point.resale_value,
+        "retention_percentage": opt_point.retention_rate,
+        "net_cost_per_km": opt_point.net_cost_per_km,
+        "reasoning": (
+            f"Selling at Year {opt_year} captures {opt_point.retention_rate}% residual value before secondary market liquidity drops and scheduled tire/major service costs accelerate."
+        ),
+    }
+
+    # Generate 3 comparative scenarios
+    scenarios: List[SimulationScenario] = [
+        SimulationScenario(
+            name="🌿 Conservative / Early Exit",
+            annual_kms=round(req.annual_kms * 0.6, 0),
+            sell_year=3,
+            final_resale=round(
+                timeline[min(len(timeline) - 1, 3)].resale_value * 1.08, 0
+            ),
+            total_spent=round(
+                timeline[min(len(timeline) - 1, 3)].cumulative_tco * 0.75, 0
+            ),
+            net_cost_per_km=round(
+                timeline[min(len(timeline) - 1, 3)].net_cost_per_km * 1.15, 2
+            ),
+            monthly_burn=round(
+                timeline[min(len(timeline) - 1, 3)].monthly_effective_cost * 0.85, 0
+            ),
+            summary="Low odometer wear yields top-tier resale price at dealership or direct buyer trade-in.",
+        ),
+        SimulationScenario(
+            name="🚗 Standard Daily Commute",
+            annual_kms=req.annual_kms,
+            sell_year=opt_year,
+            final_resale=opt_point.resale_value,
+            total_spent=opt_point.cumulative_tco,
+            net_cost_per_km=opt_point.net_cost_per_km,
+            monthly_burn=opt_point.monthly_effective_cost,
+            summary="Balanced ownership sweet-spot minimizing annual depreciation while maximizing utility.",
+        ),
+        SimulationScenario(
+            name="⚡ High-Mileage / Full Lifecycle",
+            annual_kms=round(req.annual_kms * 1.5, 0),
+            sell_year=min(req.horizon_years, 8),
+            final_resale=round(
+                timeline[min(len(timeline) - 1, 8)].resale_value * 0.90, 0
+            ),
+            total_spent=round(
+                timeline[min(len(timeline) - 1, 8)].cumulative_tco * 1.45, 0
+            ),
+            net_cost_per_km=round(
+                timeline[min(len(timeline) - 1, 8)].net_cost_per_km * 0.88, 2
+            ),
+            monthly_burn=round(
+                timeline[min(len(timeline) - 1, 8)].monthly_effective_cost * 1.25, 0
+            ),
+            summary="Extracts maximum utility from asset, resulting in lowest effective cost per kilometer driven.",
+        ),
+    ]
+
+    last_pt = timeline[-1]
+    summary = {
+        "final_resale_value": last_pt.resale_value,
+        "total_depreciation_loss": last_pt.depreciation_loss,
+        "total_operating_expense": last_pt.cumulative_operating_cost,
+        "total_cost_of_ownership": last_pt.cumulative_tco,
+        "average_cost_per_km": last_pt.net_cost_per_km,
+        "average_monthly_cost": last_pt.monthly_effective_cost,
+    }
+
+    return SimulationResponse(
+        success=True,
+        vehicle={
+            "type": v_type,
+            "brand": brand,
+            "specs": (
+                f"{int(power_disp)}cc"
+                if v_type == "bike"
+                else f"{int(power_disp)}cc {fuel} {trans}"
+            ),
+        },
+        initial_price=round(initial_price, 0),
+        horizon_years=req.horizon_years,
+        annual_kms=req.annual_kms,
+        fuel_type=fuel,
+        mileage_kml=round(mileage_kml, 1),
+        fuel_price_per_unit=fuel_price,
+        timeline=timeline,
+        summary=summary,
+        optimal_sell_window=optimal_sell_window,
+        scenarios=scenarios,
+    )
+
+
+@app.post("/simulate/lifecycle", response_model=SimulationResponse)
+@limiter.limit("30/minute")
+def simulate_lifecycle_post(request: Request, payload: SimulationRequest):
+    """Enterprise API endpoint for vehicle ownership lifecycle simulation, TCO forecasting, and liquidation window detection."""
+    return calculate_lifecycle_simulation(payload)
+
+
+@app.get("/api/v1/demo/simulate")
+@limiter.limit("60/minute")
+def demo_simulate_get(
+    request: Request,
+    vehicle_type: Literal["bike", "car"] = Query("bike"),
+    brand: str = Query("Royal Enfield"),
+    power: Optional[float] = Query(None),
+    engine_cc: Optional[float] = Query(None),
+    purchase_price: Optional[float] = Query(None),
+    annual_kms: float = Query(10000.0),
+    horizon_years: int = Query(5),
+    fuel: str = Query("Petrol"),
+):
+    """Public demo simulation endpoint for portfolio calculators and interactive visualizers."""
+    req = SimulationRequest(
+        vehicle_type=vehicle_type,
+        brand=brand,
+        power=power,
+        engine_cc=engine_cc,
+        purchase_price=purchase_price,
+        annual_kms=annual_kms,
+        horizon_years=horizon_years,
+        fuel=fuel,
+    )
+    return calculate_lifecycle_simulation(req)
 
 
 # Mount compiled frontend SPA if dist/ exists (production mode / Docker)

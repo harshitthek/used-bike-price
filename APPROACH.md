@@ -382,14 +382,21 @@ We upgraded the machine learning core from standalone gradient boosted models to
 - Single-command orchestration via `docker-compose.yml`.
 - Integrated `html2pdf.js` with dynamic code-splitting for 1-click vector PDF inspection certificate generation.
 
-## 26. Phase 21 — Portfolio Public Demo API & Real-Value Econometric Envelopes
-To allow seamless integration into developer portfolios, web widgets, and external microservices:
+## 27. Phase 22 — Car & Bike Ownership Lifecycle & Market Simulator Engine
+To provide comprehensive automotive fintech intelligence, we built an interactive **Ownership Lifecycle & Market Simulator**:
 
-- **Public Demo Endpoints**: Added `GET /api/v1/demo/estimate` and `POST /api/v1/demo/estimate` requiring no API keys with wildcard CORS (`allow_origins=["*"]`).
-- **1-Line Embeddable JavaScript Widget (`widget.js`)**: Automatically resolves `document.currentScript.src` for dynamic cross-origin cloud API communication.
-- **Empirical Econometric Envelopes**: Integrated compound non-linear age decay ($\frac{1}{(1 + 0.085 \times \text{Age})^{1.35}}$), mileage wear decay, multi-owner discounts, manufacturer displacement boundaries, and scrap salvage asymptote floors.
-- **Cloud Deployment**: Created `render.yaml` blueprint for 1-click zero-configuration deployment to Render.com and Railway.app.
-- **Test Suite**: Expanded test coverage to 26 unit and integration tests passing in $100\%$ green status.
+- **Total Cost of Ownership (TCO) Formulation**: Models cumulative multi-year financial cash flow combining:
+  - Fuel/EV electricity consumption: $\text{Fuel Expense} = \frac{\text{Annual KMs}}{\text{Mileage (km/L)}} \times \text{Fuel Rate}$
+  - Comprehensive annual insurance with Insured Declared Value (IDV) depreciation
+  - Scheduled maintenance, wear-and-tear consumables, and age-scaled servicing curves
+  - Net Depreciation Loss: $\text{Acquisition Price} - \text{Resale Value}_t$
+- **Unit Economic Performance**: Calculates live **Effective Cost per KM (₹/km)** and **Monthly Operating Burn (₹/month)**.
+- **AI Optimal Liquidation Window**: Identifies the mathematical inflection point where marginal depreciation rate stabilizes before maintenance costs rise, recommending the precise year to liquidate or trade-in.
+- **Multi-Scenario Stress Test**: Side-by-side strategy modeling across *Conservative Early Exit (Year 3)*, *Standard Commute (Year 5)*, and *High-Mileage Lifecycle (Year 8)*.
+- **Interactive Simulator Studio**: Designed a responsive dark-obsidian UI in React with multi-layer SVG stacked area charts, custom parameter sliders, and detailed financial ledger tables.
+- **API Endpoints**: Deployed authenticated `POST /simulate/lifecycle` and public `GET /api/v1/demo/simulate` for portfolio embeddability.
+- **Verification**: Expanded test suite to **29 comprehensive unit and integration tests** passing with $100\%$ green coverage.
+
 
 
 

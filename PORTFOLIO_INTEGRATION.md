@@ -236,4 +236,21 @@ curl -X GET "http://127.0.0.1:8000/api/v1/demo/estimate?vehicle_type=bike&brand=
 
 # Test car appraisal
 curl -X GET "http://127.0.0.1:8000/api/v1/demo/estimate?vehicle_type=car&brand=Maruti&engine_cc=1197&kms_driven=35000&age=4"
+
+# Test ownership lifecycle simulator
+curl -X GET "http://127.0.0.1:8000/api/v1/demo/simulate?vehicle_type=bike&brand=Royal%20Enfield&power=350&annual_kms=10000&horizon_years=5"
 ```
+
+---
+
+### 4. `GET /api/v1/demo/simulate`
+Simulates progressive multi-year depreciation, cumulative operating expenses (fuel, scheduled maintenance, comprehensive insurance), net cost per kilometer driven (₹/km), and calculates the **Optimal Liquidation Sweet-Spot**.
+
+**Query Parameters:**
+* `vehicle_type`: `"bike"` or `"car"`
+* `brand`: e.g. `"Royal Enfield"`, `"Hyundai"`
+* `power` / `engine_cc`: Displacement in cc
+* `purchase_price`: Initial acquisition amount (optional)
+* `annual_kms`: Estimated annual distance driven (e.g. `10000`)
+* `horizon_years`: Simulation duration (e.g. `5` to `10`)
+

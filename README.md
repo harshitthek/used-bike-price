@@ -60,8 +60,18 @@
   </tr>
   <tr>
     <td width="50%">
+      <h3>🎮 Car & Bike Lifecycle & TCO Simulator</h3>
+      Interactive multi-year financial simulator computing cumulative fuel/charging, insurance, scheduled maintenance, <b>Net Cost per KM (₹/km)</b>, and <b>AI-Powered Optimal Liquidation Sweet-Spot</b>.
+    </td>
+    <td width="50%">
       <h3>📜 1-Click PDF Valuation Certificate</h3>
       Client-side vector PDF generation engine (<code>html2pdf.js</code>) creating official verification certificates with verification ID, vehicle specs, and 5-year depreciation schedules.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>📈 5-Year Forward Resale Forecast</h3>
+      Simulates progressive vehicle aging ($t \in [0..5]$ yrs) and odometer usage ($+6\text{k km/yr}$ bikes, $+12\text{k km/yr}$ cars) with custom interactive bezier curve visualizations.
     </td>
     <td width="50%">
       <h3>🐳 Production Docker & Compose</h3>

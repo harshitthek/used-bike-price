@@ -179,3 +179,19 @@ CAR_PREDICTION_FEATURES: Tuple[str, ...] = (
     "kms_driven",
     "owner_rank",
 )
+
+# ── SIMULATION & TCO CONSTANTS ─────────────────────────────────────
+DEFAULT_FUEL_PRICES: Dict[str, float] = {
+    "Petrol": 102.0,
+    "Diesel": 89.0,
+    "CNG": 75.0,
+    "Electric": 1.8,
+}
+
+DEFAULT_MILEAGE_KML: Dict[str, float] = {
+    "bike": 45.0,
+    "car_petrol": 16.0,
+    "car_diesel": 20.0,
+    "car_cng": 24.0,
+    "car_electric": 1.0,
+}

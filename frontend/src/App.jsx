@@ -220,6 +220,56 @@ function App() {
   const [fleetResult, setFleetResult] = useState(null)
   const [fleetLoading, setFleetLoading] = useState(false)
 
+  // Lifecycle Simulator State
+  const [simData, setSimData] = useState({
+    vehicle_type: 'bike',
+    brand: 'Royal Enfield',
+    power: 350,
+    engine_cc: 350,
+    max_power_bhp: 20,
+    fuel: 'Petrol',
+    transmission: 'Manual',
+    purchase_price: 220000,
+    current_age: 0,
+    current_kms: 0,
+    owner_rank: 1,
+    annual_kms: 10000,
+    horizon_years: 5,
+    custom_fuel_price: 102,
+    custom_mileage_kml: 35
+  })
+  const [simResult, setSimResult] = useState(null)
+  const [simLoading, setSimLoading] = useState(false)
+  const [simError, setSimError] = useState(null)
+  const [simActiveYear, setSimActiveYear] = useState(null)
+
+  const handleRunSimulation = async (overrideData = null) => {
+    const dataToUse = overrideData || simData
+    setSimLoading(true)
+    setSimError(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}/simulate/lifecycle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'dev_12345'
+        },
+        body: JSON.stringify(dataToUse)
+      })
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}))
+        throw new Error(errPayload.detail || `Simulation API Error (${res.status})`)
+      }
+      const data = await res.json()
+      setSimResult(data)
+      setSimActiveYear(data.optimal_sell_window?.recommended_sell_year || 3)
+    } catch (err) {
+      setSimError(err.message || 'Could not connect to simulation server')
+    } finally {
+      setSimLoading(false)
+    }
+  }
+
   // General App State
   const [contracts, setContracts] = useState({ bike: null, car: null })
   const [contractError, setContractError] = useState(null)
@@ -229,6 +279,7 @@ function App() {
   const [copied, setCopied] = useState(false)
   const [showCertModal, setShowCertModal] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+
 
   const handleDownloadPdf = () => {
     const element = document.getElementById('printable-valuation-certificate')
@@ -575,6 +626,28 @@ Verification: 92.0% Empirical Machine Learning Confidence`
 
             <button
               type="button"
+              onClick={() => {
+                setViewMode('sim')
+                if (!simResult) handleRunSimulation()
+              }}
+              className={`relative px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'sim' ? 'text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {viewMode === 'sim' && (
+                <motion.div
+                  layoutId="active-view-tab"
+                  className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 shadow-md shadow-indigo-500/30 border border-white/20"
+                  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Activity size={13} className={viewMode === 'sim' ? 'text-cyan-300' : ''} /> Simulator
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setViewMode('fleet')}
               className={`relative px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'fleet' ? 'text-white' : 'text-slate-400 hover:text-white'
@@ -592,6 +665,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
               </span>
             </button>
           </div>
+
 
           {/* Live System Signal */}
           <div className="hidden lg:flex items-center gap-3 text-xs text-slate-400">
@@ -1401,7 +1475,588 @@ Verification: 92.0% Empirical Machine Learning Confidence`
           </motion.div>
         )}
 
+        {/* VIEW MODE 4: CAR & BIKE LIFECYCLE & MARKET SIMULATOR */}
+        {viewMode === 'sim' && (
+          <div>
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-center mb-8"
+            >
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-slate-300 mb-3 shadow-inner">
+                <Sparkles size={13} className="text-cyan-400" />
+                <span>AI Ownership & Market Horizon Engine</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white font-display mb-2">
+                Car & Bike Lifecycle Simulator
+              </h2>
+              <p className="text-sm text-slate-400 max-w-xl mx-auto">
+                Model multi-year asset depreciation curves, project cumulative operating cash-flow (fuel, insurance, maintenance), and discover your vehicle's optimal liquidation sweet-spot.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Simulator Controls */}
+              <div className="lg:col-span-4 space-y-5">
+                <GlassCard className="p-5 border-white/[0.08]">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-4">
+                    <div className="flex items-center gap-2">
+                      <Settings2 size={16} className="text-indigo-400" />
+                      <h3 className="text-sm font-bold text-white">Simulation Setup</h3>
+                    </div>
+
+                    {/* Segment Toggle */}
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSimData(prev => ({
+                            ...prev,
+                            vehicle_type: 'bike',
+                            brand: 'Royal Enfield',
+                            power: 350,
+                            purchase_price: 220000,
+                            custom_mileage_kml: 35
+                          }))
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all ${
+                          simData.vehicle_type === 'bike' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        🏍️ Bike
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSimData(prev => ({
+                            ...prev,
+                            vehicle_type: 'car',
+                            brand: 'Hyundai',
+                            engine_cc: 1493,
+                            fuel: 'Diesel',
+                            transmission: 'Manual',
+                            purchase_price: 1150000,
+                            custom_mileage_kml: 18
+                          }))
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all ${
+                          simData.vehicle_type === 'car' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        🚗 Car
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Model Quick Presets */}
+                  <div className="mb-4">
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-2">
+                      Quick Benchmark Presets
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {simData.vehicle_type === 'bike' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Royal Enfield', power: 350, purchase_price: 220000, custom_mileage_kml: 35 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-indigo-300">Classic 350</span>
+                            <span className="text-[10px] text-slate-500">₹2.20L • 35 km/L</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'KTM', power: 373, purchase_price: 330000, custom_mileage_kml: 28 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-orange-300">Duke 390</span>
+                            <span className="text-[10px] text-slate-500">₹3.30L • 28 km/L</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Hero', power: 100, purchase_price: 85000, custom_mileage_kml: 65 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-emerald-300">Splendor+</span>
+                            <span className="text-[10px] text-slate-500">₹85k • 65 km/L</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Yamaha', power: 155, purchase_price: 195000, custom_mileage_kml: 45 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-cyan-300">YZF-R15</span>
+                            <span className="text-[10px] text-slate-500">₹1.95L • 45 km/L</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Maruti', engine_cc: 1197, fuel: 'Petrol', purchase_price: 750000, custom_mileage_kml: 18 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-blue-300">Swift VXI</span>
+                            <span className="text-[10px] text-slate-500">₹7.50L • 18 km/L</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Hyundai', engine_cc: 1493, fuel: 'Diesel', purchase_price: 1450000, custom_mileage_kml: 18 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-indigo-300">Creta Diesel</span>
+                            <span className="text-[10px] text-slate-500">₹14.5L • 18 km/L</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Tata', engine_cc: 1199, fuel: 'Petrol', purchase_price: 980000, custom_mileage_kml: 16 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-emerald-300">Nexon XZ+</span>
+                            <span className="text-[10px] text-slate-500">₹9.80L • 16 km/L</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = { ...simData, brand: 'Mahindra', engine_cc: 2184, fuel: 'Diesel', purchase_price: 1650000, custom_mileage_kml: 14 }
+                              setSimData(updated)
+                              handleRunSimulation(updated)
+                            }}
+                            className="text-left p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/40 text-xs text-slate-300 hover:text-white cursor-pointer"
+                          >
+                            <span className="font-bold block text-amber-300">Thar 4x4</span>
+                            <span className="text-[10px] text-slate-500">₹16.5L • 14 km/L</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Brand Selector */}
+                  <div className="mb-3">
+                    <label className="text-xs text-slate-400 block mb-1">Manufacturer</label>
+                    <select
+                      value={simData.brand}
+                      onChange={(e) => setSimData(prev => ({ ...prev, brand: e.target.value }))}
+                      className="w-full bg-[#131622] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      {(contracts[simData.vehicle_type]?.ui?.brands || ['Royal Enfield', 'KTM', 'Bajaj', 'Honda', 'Yamaha', 'Hero', 'Maruti', 'Hyundai', 'Tata']).map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Initial Acquisition Price */}
+                  <div className="mb-3">
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span className="text-slate-400">Acquisition / Showroom Price</span>
+                      <span className="text-white font-mono font-bold">₹{simData.purchase_price?.toLocaleString('en-IN')}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={simData.vehicle_type === 'bike' ? 40000 : 250000}
+                      max={simData.vehicle_type === 'bike' ? 1200000 : 6000000}
+                      step={simData.vehicle_type === 'bike' ? 10000 : 25000}
+                      value={simData.purchase_price}
+                      onChange={(e) => setSimData(prev => ({ ...prev, purchase_price: Number(e.target.value) }))}
+                      className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                  </div>
+
+                  {/* Horizon Slider */}
+                  <div className="mb-3">
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span className="text-slate-400">Simulation Horizon</span>
+                      <span className="text-cyan-300 font-mono font-bold">{simData.horizon_years} Years</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={simData.horizon_years}
+                      onChange={(e) => setSimData(prev => ({ ...prev, horizon_years: Number(e.target.value) }))}
+                      className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                      <span>1 yr (Short)</span>
+                      <span>5 yrs (Medium)</span>
+                      <span>10 yrs (Long)</span>
+                    </div>
+                  </div>
+
+                  {/* Annual KM Slider */}
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span className="text-slate-400">Annual Distance Driven</span>
+                      <span className="text-indigo-300 font-mono font-bold">{simData.annual_kms?.toLocaleString('en-IN')} km/yr</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="3000"
+                      max="35000"
+                      step="1000"
+                      value={simData.annual_kms}
+                      onChange={(e) => setSimData(prev => ({ ...prev, annual_kms: Number(e.target.value) }))}
+                      className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                      <span>3k km (Weekend)</span>
+                      <span>10k km (Daily)</span>
+                      <span>35k km (Commercial)</span>
+                    </div>
+                  </div>
+
+                  {/* Fuel Economy & Fuel Price */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Fuel Economy (km/L)</label>
+                      <input
+                        type="number"
+                        value={simData.custom_mileage_kml}
+                        onChange={(e) => setSimData(prev => ({ ...prev, custom_mileage_kml: Number(e.target.value) }))}
+                        className="w-full bg-[#131622] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Fuel Rate (₹/L)</label>
+                      <input
+                        type="number"
+                        value={simData.custom_fuel_price}
+                        onChange={(e) => setSimData(prev => ({ ...prev, custom_fuel_price: Number(e.target.value) }))}
+                        className="w-full bg-[#131622] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRunSimulation()}
+                    disabled={simLoading}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:opacity-95 text-xs font-bold text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                  >
+                    {simLoading ? (
+                      <span>Running Monte Carlo Simulation...</span>
+                    ) : (
+                      <>
+                        <Zap size={14} className="text-cyan-200" /> Run Lifecycle Simulation
+                      </>
+                    )}
+                  </button>
+                </GlassCard>
+              </div>
+
+              {/* Right Column: Simulation Output Dashboard */}
+              <div className="lg:col-span-8 space-y-5">
+                {simError && (
+                  <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                    <AlertTriangle size={16} /> {simError}
+                  </div>
+                )}
+
+                {simResult && (
+                  <>
+                    {/* Top 4 Summary Metrics */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <GlassCard className="p-3.5 border-white/[0.08]">
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Projected Resale</span>
+                        <div className="text-lg font-black text-white font-mono">
+                          ₹{simResult.summary.final_resale_value?.toLocaleString('en-IN')}
+                        </div>
+                        <span className="text-[10px] text-cyan-300 font-semibold">
+                          {simResult.timeline[simResult.timeline.length - 1]?.retention_rate}% Retention
+                        </span>
+                      </GlassCard>
+
+                      <GlassCard className="p-3.5 border-white/[0.08]">
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Depreciation Loss</span>
+                        <div className="text-lg font-black text-rose-400 font-mono">
+                          -₹{simResult.summary.total_depreciation_loss?.toLocaleString('en-IN')}
+                        </div>
+                        <span className="text-[10px] text-slate-500">Over {simResult.horizon_years} years</span>
+                      </GlassCard>
+
+                      <GlassCard className="p-3.5 border-white/[0.08]">
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Operating Expenses</span>
+                        <div className="text-lg font-black text-amber-300 font-mono">
+                          ₹{simResult.summary.total_operating_expense?.toLocaleString('en-IN')}
+                        </div>
+                        <span className="text-[10px] text-slate-500">Fuel + Maint + Ins</span>
+                      </GlassCard>
+
+                      <GlassCard className="p-3.5 border-white/[0.08]">
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Effective Cost</span>
+                        <div className="text-lg font-black text-emerald-400 font-mono">
+                          ₹{simResult.summary.average_cost_per_km} <span className="text-xs font-normal text-slate-400">/ km</span>
+                        </div>
+                        <span className="text-[10px] text-indigo-300 font-semibold">
+                          ₹{simResult.summary.average_monthly_cost?.toLocaleString('en-IN')} / mo
+                        </span>
+                      </GlassCard>
+                    </div>
+
+                    {/* AI Optimal Liquidation Window Banner */}
+                    <div className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-emerald-500/10 border border-amber-500/30 shadow-lg shadow-amber-500/5">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-black font-black shrink-0 shadow-md">
+                            <Award size={20} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300">
+                                AI Optimal Liquidation Window
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 text-[10px] font-bold">
+                                Sweet Spot
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-300 mt-1">
+                              {simResult.optimal_sell_window.reasoning}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right sm:border-l sm:border-white/10 sm:pl-4 shrink-0">
+                          <div className="text-[11px] text-slate-400">Recommended Year</div>
+                          <div className="text-base font-black text-white font-mono">
+                            Year {simResult.optimal_sell_window.recommended_sell_year} ({simResult.optimal_sell_window.recommended_calendar_year})
+                          </div>
+                          <div className="text-[10px] text-emerald-400 font-bold">
+                            ₹{simResult.optimal_sell_window.projected_liquidation_price?.toLocaleString('en-IN')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Interactive SVG Lifecycle Chart */}
+                    <GlassCard className="p-5 border-white/[0.08]">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                            Ownership Cost & Resale Horizon Curve
+                          </h4>
+                          <p className="text-[11px] text-slate-500">Asset Value Trajectory vs Cumulative Total Cost of Ownership</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px]">
+                          <span className="flex items-center gap-1 text-cyan-300">
+                            <span className="h-2 w-2 rounded-full bg-cyan-400" /> Resale Value
+                          </span>
+                          <span className="flex items-center gap-1 text-indigo-300">
+                            <span className="h-2 w-2 rounded-full bg-indigo-400" /> Cumulative TCO
+                          </span>
+                          <span className="flex items-center gap-1 text-amber-300">
+                            <span className="h-2 w-2 rounded-full bg-amber-400" /> Operating Cost
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* SVG Multi-Layer Graph */}
+                      <div className="relative w-full h-52 bg-white/[0.01] rounded-xl p-2 border border-white/[0.04]">
+                        <svg className="w-full h-full overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id="resaleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.0" />
+                            </linearGradient>
+                            <linearGradient id="tcoGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#818cf8" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
+
+                          {/* Grid Lines */}
+                          {[0, 45, 90, 135, 180].map((y, idx) => (
+                            <line key={idx} x1="0" y1={y} x2="500" y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                          ))}
+
+                          {/* Generate Paths */}
+                          {(() => {
+                            const pts = simResult.timeline
+                            const maxVal = Math.max(
+                              simResult.initial_price * 1.1,
+                              ...pts.map(p => p.cumulative_tco)
+                            )
+                            const widthStep = 500 / (pts.length - 1)
+
+                            const resalePoints = pts.map((p, i) => {
+                              const x = i * widthStep
+                              const y = 170 - (p.resale_value / maxVal) * 150
+                              return `${x},${y}`
+                            })
+
+                            const tcoPoints = pts.map((p, i) => {
+                              const x = i * widthStep
+                              const y = 170 - (p.cumulative_tco / maxVal) * 150
+                              return `${x},${y}`
+                            })
+
+                            const operatingPoints = pts.map((p, i) => {
+                              const x = i * widthStep
+                              const y = 170 - (p.cumulative_operating_cost / maxVal) * 150
+                              return `${x},${y}`
+                            })
+
+                            const resaleArea = `M 0,170 L ${resalePoints.join(' L ')} L 500,170 Z`
+                            const tcoArea = `M 0,170 L ${tcoPoints.join(' L ')} L 500,170 Z`
+
+                            return (
+                              <>
+                                <path d={resaleArea} fill="url(#resaleGradient)" />
+                                <path d={tcoArea} fill="url(#tcoGradient)" />
+
+                                <path d={`M ${resalePoints.join(' L ')}`} fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" />
+                                <path d={`M ${tcoPoints.join(' L ')}`} fill="none" stroke="#818cf8" strokeWidth="2.5" strokeLinecap="round" />
+                                <path d={`M ${operatingPoints.join(' L ')}`} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="4 4" />
+
+                                {/* Interactive Milestone Dots */}
+                                {pts.map((p, i) => {
+                                  const x = i * widthStep
+                                  const yResale = 170 - (p.resale_value / maxVal) * 150
+                                  const isOpt = p.year === simResult.optimal_sell_window.recommended_sell_year
+                                  return (
+                                    <g key={i} className="cursor-pointer" onClick={() => setSimActiveYear(p.year)}>
+                                      <circle
+                                        cx={x}
+                                        cy={yResale}
+                                        r={isOpt ? 6 : 4}
+                                        fill={isOpt ? '#f59e0b' : '#22d3ee'}
+                                        stroke="#0b0d14"
+                                        strokeWidth="2"
+                                      />
+                                    </g>
+                                  )
+                                })}
+                              </>
+                            )
+                          })()}
+                        </svg>
+                      </div>
+
+                      {/* Year Timeline Selector */}
+                      <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/[0.06] text-xs">
+                        {simResult.timeline.map(p => (
+                          <button
+                            key={p.year}
+                            type="button"
+                            onClick={() => setSimActiveYear(p.year)}
+                            className={`px-2 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                              simActiveYear === p.year ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Yr {p.year}
+                          </button>
+                        ))}
+                      </div>
+                    </GlassCard>
+
+                    {/* Comparative Scenarios Matrix */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {simResult.scenarios.map((sc, idx) => (
+                        <GlassCard key={idx} className="p-4 border-white/[0.08] flex flex-col justify-between">
+                          <div>
+                            <span className="text-xs font-black text-white block mb-1">{sc.name}</span>
+                            <p className="text-[11px] text-slate-400 mb-3">{sc.summary}</p>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between text-slate-400">
+                                <span>Sell Horizon</span>
+                                <span className="text-white font-bold">Year {sc.sell_year}</span>
+                              </div>
+                              <div className="flex justify-between text-slate-400">
+                                <span>Liquidation Resale</span>
+                                <span className="text-cyan-300 font-mono font-bold">₹{sc.final_resale?.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="flex justify-between text-slate-400">
+                                <span>Cumulative Spent</span>
+                                <span className="text-slate-300 font-mono">₹{sc.total_spent?.toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-bold">
+                            <span className="text-emerald-400 font-mono">₹{sc.net_cost_per_km} / km</span>
+                            <span className="text-indigo-300 font-mono">₹{sc.monthly_burn?.toLocaleString('en-IN')} / mo</span>
+                          </div>
+                        </GlassCard>
+                      ))}
+                    </div>
+
+                    {/* Detailed Year-by-Year Financial Ledger */}
+                    <GlassCard className="p-5 border-white/[0.08] overflow-x-auto">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Calendar size={14} className="text-indigo-400" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                          Year-by-Year Financial Ledger
+                        </h4>
+                      </div>
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-white/[0.08] text-slate-400 uppercase tracking-wider text-[10px]">
+                            <th className="pb-2">Year</th>
+                            <th className="pb-2">Odometer</th>
+                            <th className="pb-2">Resale Price</th>
+                            <th className="pb-2">Annual Fuel</th>
+                            <th className="pb-2">Maintenance</th>
+                            <th className="pb-2">Insurance</th>
+                            <th className="pb-2">Cumulative TCO</th>
+                            <th className="pb-2 text-right">Cost / KM</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.04] font-mono">
+                          {simResult.timeline.map((row) => (
+                            <tr key={row.year} className={`hover:bg-white/[0.02] ${simActiveYear === row.year ? 'bg-indigo-500/10' : ''}`}>
+                              <td className="py-2.5 text-white font-bold">Yr {row.year} ({row.calendar_year})</td>
+                              <td className="py-2.5 text-slate-300">{row.total_kms?.toLocaleString('en-IN')} km</td>
+                              <td className="py-2.5 text-cyan-300 font-bold">₹{row.resale_value?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 text-slate-400">₹{row.annual_fuel_cost?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 text-slate-400">₹{row.annual_maintenance?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 text-slate-400">₹{row.annual_insurance?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 text-indigo-300 font-bold">₹{row.cumulative_tco?.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 text-emerald-400 font-bold text-right">₹{row.net_cost_per_km}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </GlassCard>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
+
 
       {/* 🧾 LUXURY VALUATION CERTIFICATE MODAL */}
       {showCertModal && result && (

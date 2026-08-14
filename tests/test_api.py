@@ -431,3 +431,69 @@ def test_demo_widget_js():
     assert response.status_code == 200
     assert "application/javascript" in response.headers.get("content-type", "")
     assert "autovaluate-portfolio-widget" in response.text
+
+
+def test_simulate_lifecycle_post_bike(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", DummyBikeModel())
+    monkeypatch.setattr(api_module, "bike_metadata", {"metrics": {"rmse": 10000.0}})
+
+    response = client.post(
+        "/simulate/lifecycle",
+        json={
+            "vehicle_type": "bike",
+            "brand": "Royal Enfield",
+            "power": 350,
+            "purchase_price": 220000,
+            "current_age": 0,
+            "current_kms": 0,
+            "annual_kms": 10000,
+            "horizon_years": 5,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert len(payload["timeline"]) == 6  # Year 0 through Year 5
+    assert payload["timeline"][0]["year"] == 0
+    assert payload["timeline"][5]["year"] == 5
+    assert payload["summary"]["total_cost_of_ownership"] > 0
+    assert "recommended_sell_year" in payload["optimal_sell_window"]
+    assert len(payload["scenarios"]) == 3
+
+
+def test_simulate_lifecycle_post_car(monkeypatch):
+    monkeypatch.setattr(api_module, "car_model", DummyCarModel())
+    monkeypatch.setattr(api_module, "car_metadata", {"metrics": {"rmse": 80000.0}})
+
+    response = client.post(
+        "/simulate/lifecycle",
+        json={
+            "vehicle_type": "car",
+            "brand": "Hyundai",
+            "engine_cc": 1497,
+            "max_power_bhp": 113,
+            "fuel": "Diesel",
+            "transmission": "Manual",
+            "purchase_price": 1200000,
+            "annual_kms": 15000,
+            "horizon_years": 6,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["fuel_type"] == "Diesel"
+    assert payload["summary"]["average_cost_per_km"] > 0
+
+
+def test_demo_simulate_get(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", DummyBikeModel())
+    monkeypatch.setattr(api_module, "bike_metadata", {"metrics": {"rmse": 10000.0}})
+
+    response = client.get(
+        "/api/v1/demo/simulate?vehicle_type=bike&brand=Royal%20Enfield&power=350&annual_kms=10000&horizon_years=5"
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert len(payload["timeline"]) == 6
