@@ -12,7 +12,13 @@ import {
   CloudRain, 
   Volume2, 
   VolumeX, 
-  Fuel
+  Fuel,
+  Shield,
+  Wrench,
+  TrendingDown,
+  Calendar,
+  Sparkles,
+  Info
 } from 'lucide-react'
 
 // Web Audio API engine sound generator
@@ -124,6 +130,15 @@ const getBrandColor = (brand, vType) => {
   return vType === 'bike' ? '#818cf8' : '#38bdf8'
 }
 
+// Year Strategy Advisor Helper
+const getYearInsight = (year, optYear) => {
+  if (year === 0) return { tag: 'Brand New', tip: 'Initial acquisition baseline with maximum market retention.' }
+  if (year === optYear) return { tag: '🔥 Peak Liquidation Window', tip: 'Optimal inflection point to trade-in before steep compounding service & depreciation costs.' }
+  if (year < optYear) return { tag: 'Prime Value Phase', tip: 'Enjoyable ownership phase with high retention rate.' }
+  if (year <= optYear + 2) return { tag: 'High-Utility Plateau', tip: 'Moderate maintenance compounding; still viable for long-term hold.' }
+  return { tag: 'Elevated Maintenance Exposure', tip: 'Residual resale value plateaus while scheduled maintenance risk increases.' }
+}
+
 export function AnimatedVehicleStage({
   vehicleType = 'bike',
   brand = 'Royal Enfield',
@@ -148,6 +163,7 @@ export function AnimatedVehicleStage({
   const maxYear = timeline.length > 0 ? timeline[timeline.length - 1].year : 5
   const currentPoint = timeline.find((p) => p.year === activeYear) || timeline[0] || {}
   const isOptimal = activeYear === optimalYear
+  const yearInsight = getYearInsight(activeYear, optimalYear)
 
   // Simulated live speed and RPM values (integer rounded, no decimal overflow)
   const simulatedSpeed = isPlaying ? Math.round(Math.min(115, 45 + activeYear * 9.5)) : 0
@@ -269,14 +285,14 @@ export function AnimatedVehicleStage({
       )}
 
       {/* ============================================================ */}
-      {/* 🎛️ TOP CONTROL & TELEMETRY RIBBON                            */}
+      {/* 🎛️ TOP CONTROL & TELEMETRY RIBBON (Responsive 3-Column Grid) */}
       {/* ============================================================ */}
-      <div className="relative z-20 flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08] mb-4">
+      <div className="relative z-20 grid grid-cols-1 md:grid-cols-12 items-center gap-3 pb-3 border-b border-white/[0.08] mb-4">
         
-        {/* Left: Brand Badge & Body Type Selector */}
-        <div className="flex items-center gap-3">
+        {/* Left (Col 1-5): Brand Badge & Body Type Selector */}
+        <div className="md:col-span-5 flex items-center gap-3">
           <div 
-            className="h-9 w-9 rounded-xl flex items-center justify-center shadow-lg border border-white/20"
+            className="h-9 w-9 rounded-xl flex items-center justify-center shadow-lg border border-white/20 shrink-0"
             style={{ background: `linear-gradient(135deg, ${brandColor}, #312e81)` }}
           >
             <Gauge size={18} className="text-white" />
@@ -297,21 +313,21 @@ export function AnimatedVehicleStage({
                   <button
                     type="button"
                     onClick={() => setBodyStyle('cruiser')}
-                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'cruiser' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'cruiser' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Cruiser
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('sport')}
-                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sport' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sport' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Supersport
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('naked')}
-                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'naked' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'naked' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Naked
                   </button>
@@ -321,21 +337,21 @@ export function AnimatedVehicleStage({
                   <button
                     type="button"
                     onClick={() => setBodyStyle('sedan')}
-                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sedan' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'sedan' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Sedan
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('suv')}
-                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'suv' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'suv' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Compact SUV
                   </button>
                   <button
                     type="button"
                     onClick={() => setBodyStyle('offroad')}
-                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'offroad' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer transition-all ${bodyStyle === 'offroad' ? 'bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-400 hover:text-white'}`}
                   >
                     Rugged 4x4
                   </button>
@@ -345,38 +361,40 @@ export function AnimatedVehicleStage({
           </div>
         </div>
 
-        {/* Center: Real-Time Telemetry Cluster */}
-        <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 shadow-inner">
-          <div className="text-center">
-            <span className="text-[8px] uppercase tracking-wider text-slate-400 block">Speed</span>
-            <span className="text-xs font-black text-white font-mono">{simulatedSpeed} <span className="text-[9px] font-normal text-slate-400">km/h</span></span>
-          </div>
-
-          <div className="w-[1px] h-5 bg-white/10" />
-
-          <div className="text-center">
-            <span className="text-[8px] uppercase tracking-wider text-slate-400 block">Gear</span>
-            <span className="text-xs font-black text-cyan-300 font-mono">{currentGear}</span>
-          </div>
-
-          <div className="w-[1px] h-5 bg-white/10" />
-
-          <div className="w-16 text-center">
-            <div className="flex justify-between text-[8px] font-mono text-slate-400">
-              <span>RPM</span>
-              <span className={simulatedRPM > 5500 ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{simulatedRPM}</span>
+        {/* Center (Col 6-8): Real-Time Telemetry Cluster */}
+        <div className="md:col-span-3 flex items-center justify-center">
+          <div className="flex items-center gap-2.5 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 shadow-inner">
+            <div className="text-center">
+              <span className="text-[7px] uppercase tracking-wider text-slate-400 block">Speed</span>
+              <span className="text-xs font-black text-white font-mono">{simulatedSpeed} <span className="text-[8px] font-normal text-slate-400">km/h</span></span>
             </div>
-            <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden mt-0.5">
-              <div 
-                className={`h-full transition-all duration-100 ${simulatedRPM > 5500 ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-cyan-400 to-indigo-500'}`}
-                style={{ width: `${Math.min(100, (simulatedRPM / 7500) * 100)}%` }}
-              />
+
+            <div className="w-[1px] h-4 bg-white/10" />
+
+            <div className="text-center">
+              <span className="text-[7px] uppercase tracking-wider text-slate-400 block">Gear</span>
+              <span className="text-xs font-black text-cyan-300 font-mono">{currentGear}</span>
+            </div>
+
+            <div className="w-[1px] h-4 bg-white/10" />
+
+            <div className="w-14 text-center">
+              <div className="flex justify-between text-[7px] font-mono text-slate-400">
+                <span>RPM</span>
+                <span className={simulatedRPM > 5500 ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{simulatedRPM}</span>
+              </div>
+              <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden mt-0.5">
+                <div 
+                  className={`h-full transition-all duration-100 ${simulatedRPM > 5500 ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-cyan-400 to-indigo-500'}`}
+                  style={{ width: `${Math.min(100, (simulatedRPM / 7500) * 100)}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Environment, Sound & Playback Controls */}
-        <div className="flex items-center gap-2">
+        {/* Right (Col 9-12): Environment, Sound & Playback Controls */}
+        <div className="md:col-span-4 flex items-center justify-end gap-2">
           {/* Environment Switcher */}
           <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.08]">
             <button
@@ -422,7 +440,7 @@ export function AnimatedVehicleStage({
             </button>
           </div>
 
-          {/* Speed Toggle */}
+          {/* Speed Multiplier */}
           <button
             type="button"
             onClick={() => setPlaybackSpeed(playbackSpeed === 1 ? 2 : 1)}
@@ -431,7 +449,7 @@ export function AnimatedVehicleStage({
             {playbackSpeed}x
           </button>
 
-          {/* Play / Pause Action Button */}
+          {/* Play / Pause Action */}
           <button
             type="button"
             onClick={() => {
@@ -440,9 +458,9 @@ export function AnimatedVehicleStage({
               }
               setIsPlaying(!isPlaying)
             }}
-            className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 cursor-pointer transition-all"
+            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 cursor-pointer transition-all"
           >
-            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
+            {isPlaying ? <Pause size={12} /> : <Play size={12} />}
             <span>{isPlaying ? 'Pause' : 'Play Drive'}</span>
           </button>
 
@@ -456,7 +474,7 @@ export function AnimatedVehicleStage({
             className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white border border-white/[0.08] cursor-pointer transition-all"
             title="Reset Simulation"
           >
-            <RotateCcw size={13} />
+            <RotateCcw size={12} />
           </button>
         </div>
       </div>
@@ -490,8 +508,8 @@ export function AnimatedVehicleStage({
           ))}
         </div>
 
-        {/* Milestone Roadside Signposts (evenly distributed at top) */}
-        <div className="absolute top-3 inset-x-0 flex justify-between px-6 pointer-events-none z-10">
+        {/* Milestone Roadside Signposts (With Retention Value Tags) */}
+        <div className="absolute top-2 inset-x-0 flex justify-between px-6 pointer-events-none z-10">
           {timeline.map((pt) => {
             const isTarget = pt.year === activeYear
             const isOpt = pt.year === optimalYear
@@ -502,8 +520,11 @@ export function AnimatedVehicleStage({
                   isTarget ? 'scale-110 opacity-100' : 'opacity-40'
                 }`}
               >
+                <span className="text-[8px] font-mono text-slate-400 mb-0.5">
+                  {pt.retention_rate}%
+                </span>
                 <div 
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border ${
+                  className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border ${
                     isOpt
                       ? 'bg-amber-500/25 text-amber-300 border-amber-500/60 shadow-lg shadow-amber-500/20'
                       : isTarget
@@ -526,7 +547,7 @@ export function AnimatedVehicleStage({
               initial={{ opacity: 0, y: -10, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.92 }}
-              className="absolute top-9 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500/30 via-orange-500/30 to-amber-500/30 border border-amber-400/70 shadow-xl shadow-amber-500/30 flex items-center gap-1.5 text-amber-200 text-[11px] font-black backdrop-blur-md"
+              className="absolute top-10 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500/30 via-orange-500/30 to-amber-500/30 border border-amber-400/70 shadow-xl shadow-amber-500/30 flex items-center gap-1.5 text-amber-200 text-[11px] font-black backdrop-blur-md"
             >
               <Award size={13} className="text-amber-400 animate-bounce" />
               <span>Optimal Liquidation Sweet-Spot Reached! (Year {activeYear})</span>
@@ -573,7 +594,7 @@ export function AnimatedVehicleStage({
 
               {/* VEHICLE RENDERING SELECTION */}
               {vehicleType === 'bike' ? (
-                /* 🏍️ ACCURATE MOTORCYCLE VECTOR (Ground aligned at bottom) */
+                /* 🏍️ ACCURATE MOTORCYCLE VECTOR */
                 <div className="relative">
                   {/* Headlight Beam from Front Lamp */}
                   <div 
@@ -638,7 +659,7 @@ export function AnimatedVehicleStage({
                       <path d="M66 26 L84 28" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
                     </g>
 
-                    {/* Rear Wheel (Zero-Centered Math Pivot cx=34, cy=50, touches ground at y=63) */}
+                    {/* Rear Wheel (Pivot cx=34, cy=50) */}
                     <g transform="translate(34, 50)">
                       <circle cx="0" cy="0" r="13" stroke="#0f172a" strokeWidth="4.5" fill="#020617" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
@@ -649,7 +670,7 @@ export function AnimatedVehicleStage({
                       </g>
                     </g>
 
-                    {/* Front Wheel (Zero-Centered Math Pivot cx=104, cy=50, touches ground at y=63) */}
+                    {/* Front Wheel (Pivot cx=104, cy=50) */}
                     <g transform="translate(104, 50)">
                       <circle cx="0" cy="0" r="13" stroke="#0f172a" strokeWidth="4.5" fill="#020617" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
@@ -665,7 +686,7 @@ export function AnimatedVehicleStage({
                   </svg>
                 </div>
               ) : (
-                /* 🚗 HANDCRAFTED SLEEK CAR VECTOR (Ground aligned at bottom) */
+                /* 🚗 HANDCRAFTED SLEEK CAR VECTOR */
                 <div className="relative">
                   {/* Headlight Beam from Front Bumper */}
                   <div 
@@ -678,12 +699,12 @@ export function AnimatedVehicleStage({
 
                   <svg width="160" height="60" viewBox="0 0 160 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                      <linearGradient id="bodyPaintGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <linearGradient id="bodyPaintGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
                         <stop offset="35%" stopColor={brandColor} stopOpacity="1" />
                         <stop offset="100%" stopColor="#090d16" stopOpacity="1" />
                       </linearGradient>
-                      <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <linearGradient id="glassGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor="#334155" />
                         <stop offset="100%" stopColor="#020617" />
                       </linearGradient>
@@ -693,23 +714,19 @@ export function AnimatedVehicleStage({
                     {bodyStyle === 'offroad' ? (
                       /* 🛻 Rugged 4x4 */
                       <>
-                        {/* Wheel Arch Cavities */}
                         <circle cx="36" cy="46" r="14" fill="#06090e" />
                         <circle cx="120" cy="46" r="14" fill="#06090e" />
 
-                        {/* Main Body */}
                         <path 
                           d="M10 46 L10 30 L32 30 L44 14 L102 14 L122 30 L150 34 L152 46 L134 46 A 14 14 0 0 0 106 46 L50 46 A 14 14 0 0 0 22 46 Z" 
-                          fill="url(#bodyPaintGrad)" 
+                          fill="url(#bodyPaintGrad3)" 
                           stroke="#ffffff" 
                           strokeWidth="0.8" 
                         />
-                        {/* Overland Roof Rack */}
                         <line x1="46" y1="11" x2="100" y2="11" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
                         <line x1="56" y1="11" x2="56" y2="14" stroke="#94a3b8" strokeWidth="2" />
                         <line x1="90" y1="11" x2="90" y2="14" stroke="#94a3b8" strokeWidth="2" />
-                        {/* Tinted Windows */}
-                        <path d="M46 16 L98 16 L116 30 L34 30 Z" fill="url(#glassGrad)" stroke="#1e293b" strokeWidth="1" />
+                        <path d="M46 16 L98 16 L116 30 L34 30 Z" fill="url(#glassGrad3)" stroke="#1e293b" strokeWidth="1" />
                         <line x1="72" y1="16" x2="72" y2="30" stroke="#0f172a" strokeWidth="2.5" />
                       </>
                     ) : bodyStyle === 'suv' ? (
@@ -720,14 +737,12 @@ export function AnimatedVehicleStage({
 
                         <path 
                           d="M10 46 L20 34 L42 16 L100 16 L126 32 L150 36 L152 46 L134 46 A 14 14 0 0 0 106 46 L50 46 A 14 14 0 0 0 22 46 Z" 
-                          fill="url(#bodyPaintGrad)" 
+                          fill="url(#bodyPaintGrad3)" 
                           stroke="#ffffff" 
                           strokeWidth="0.8" 
                         />
-                        {/* Roof Rails */}
                         <line x1="48" y1="13" x2="96" y2="13" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
-                        {/* Windows */}
-                        <path d="M44 18 L96 18 L120 32 L36 32 Z" fill="url(#glassGrad)" stroke="#1e293b" strokeWidth="1" />
+                        <path d="M44 18 L96 18 L120 32 L36 32 Z" fill="url(#glassGrad3)" stroke="#1e293b" strokeWidth="1" />
                         <line x1="74" y1="18" x2="74" y2="32" stroke="#0f172a" strokeWidth="2.5" />
                       </>
                     ) : (
@@ -738,12 +753,11 @@ export function AnimatedVehicleStage({
 
                         <path 
                           d="M10 46 L24 36 L48 18 L96 18 L124 32 L148 36 L152 46 L134 46 A 14 14 0 0 0 106 46 L50 46 A 14 14 0 0 0 22 46 Z" 
-                          fill="url(#bodyPaintGrad)" 
+                          fill="url(#bodyPaintGrad3)" 
                           stroke="#ffffff" 
                           strokeWidth="0.8" 
                         />
-                        {/* Windows */}
-                        <path d="M50 20 L94 20 L118 32 L42 32 Z" fill="url(#glassGrad)" stroke="#1e293b" strokeWidth="1" />
+                        <path d="M50 20 L94 20 L118 32 L42 32 Z" fill="url(#glassGrad3)" stroke="#1e293b" strokeWidth="1" />
                         <line x1="72" y1="20" x2="72" y2="32" stroke="#0f172a" strokeWidth="2.5" />
                       </>
                     )}
@@ -766,7 +780,7 @@ export function AnimatedVehicleStage({
                     <path d="M10 38 L15 38 L14 42 Z" fill="#f43f5e" />
                     <circle cx="12" cy="40" r="1.2" fill="#ff4d4d" />
 
-                    {/* Rear Wheel (Zero-Centered Math Pivot cx=36, cy=46, touches ground at y=58) */}
+                    {/* Rear Wheel (Zero-Centered Math Pivot cx=36, cy=46) */}
                     <g transform="translate(36, 46)">
                       <circle cx="0" cy="0" r="12" stroke="#020617" strokeWidth="4" fill="#0f172a" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
@@ -779,7 +793,7 @@ export function AnimatedVehicleStage({
                       </g>
                     </g>
 
-                    {/* Front Wheel (Zero-Centered Math Pivot cx=120, cy=46, touches ground at y=58) */}
+                    {/* Front Wheel (Zero-Centered Math Pivot cx=120, cy=46) */}
                     <g transform="translate(120, 46)">
                       <circle cx="0" cy="0" r="12" stroke="#020617" strokeWidth="4" fill="#0f172a" />
                       <g className={isPlaying ? "animate-wheel-spin" : ""}>
@@ -813,59 +827,147 @@ export function AnimatedVehicleStage({
       </div>
 
       {/* ============================================================ */}
-      {/* 🧭 BOTTOM TIMELINE MILESTONE SCRUBBER & LIVE STATISTICS       */}
+      {/* 🧭 BOTTOM TIMELINE SCRUBBER & DENSE YEAR BREAKDOWN CARDS     */}
       {/* ============================================================ */}
-      <div className="mt-4 pt-3 border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+      <div className="mt-4 pt-3 border-t border-white/[0.08] space-y-3">
         
-        {/* Horizontal Single-Row Milestone Scrubber */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 md:pb-0 scrollbar-none">
-          <span className="text-slate-400 font-semibold shrink-0 mr-1">Year:</span>
-          {timeline.map((pt) => {
-            const isOpt = pt.year === optimalYear
-            const isSel = activeYear === pt.year
-            return (
-              <button
-                key={pt.year}
-                type="button"
-                onClick={() => {
-                  setIsPlaying(false)
-                  onYearSelect(pt.year)
-                }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 ${
-                  isSel
-                    ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/30 scale-105 border border-white/20'
-                    : isOpt
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                    : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.06]'
-                }`}
-              >
-                {isOpt ? `🏆 Yr ${pt.year}` : `Yr ${pt.year}`}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Live Step Stats Readout */}
-        <div className="flex items-center gap-4 text-[11px] font-mono shrink-0 bg-white/[0.02] px-3 py-1.5 rounded-xl border border-white/[0.06]">
-          <div className="flex items-center gap-1 text-slate-300">
-            <span className="text-slate-500">Odometer:</span>
-            <span className="font-bold text-cyan-300">{(currentPoint.total_kms || 0).toLocaleString('en-IN')} km</span>
+        {/* Row 1: Single-Line Milestone Button Bar */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 scrollbar-none">
+            <span className="text-slate-400 font-semibold text-xs shrink-0 mr-1 flex items-center gap-1">
+              <Calendar size={12} className="text-indigo-400" /> Milestone:
+            </span>
+            {timeline.map((pt) => {
+              const isOpt = pt.year === optimalYear
+              const isSel = activeYear === pt.year
+              return (
+                <button
+                  key={pt.year}
+                  type="button"
+                  onClick={() => {
+                    setIsPlaying(false)
+                    onYearSelect(pt.year)
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 ${
+                    isSel
+                      ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/30 scale-105 border border-white/20'
+                      : isOpt
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                      : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.06]'
+                  }`}
+                >
+                  {isOpt ? `🏆 Yr ${pt.year}` : `Yr ${pt.year}`}
+                </button>
+              )
+            })}
           </div>
 
-          <div className="w-[1px] h-3 bg-white/10" />
-
-          <div className="flex items-center gap-1 text-slate-300">
-            <span className="text-slate-500">Resale:</span>
-            <span className="font-bold text-emerald-400">₹{(currentPoint.resale_value || 0).toLocaleString('en-IN')}</span>
-          </div>
-
-          <div className="w-[1px] h-3 bg-white/10" />
-
-          <div className="flex items-center gap-1 text-slate-300">
-            <span className="text-slate-500">Cost/KM:</span>
-            <span className="font-bold text-indigo-300">₹{currentPoint.net_cost_per_km || 0}</span>
+          {/* Quick Strategy Chip */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px]">
+            <span className="text-slate-500">Status:</span>
+            <span className={`font-bold font-mono ${isOptimal ? 'text-amber-300' : 'text-slate-300'}`}>
+              {yearInsight.tag}
+            </span>
           </div>
         </div>
+
+        {/* Row 2: Comprehensive Multi-Metric Year Inspector Card */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/[0.06]">
+          
+          {/* Metric 1: Resale Valuation */}
+          <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+              <span>Resale Value</span>
+              <span className="text-emerald-400 font-bold">{currentPoint.retention_rate || 0}%</span>
+            </div>
+            <div className="text-sm font-black text-white font-mono">
+              ₹{(currentPoint.resale_value || 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[9px] text-slate-500 truncate">
+              {currentPoint.calendar_year ? `Cal. ${currentPoint.calendar_year}` : 'Current year'}
+            </div>
+          </div>
+
+          {/* Metric 2: Depreciation Hit */}
+          <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+              <span>Depreciation</span>
+              <TrendingDown size={11} className="text-rose-400" />
+            </div>
+            <div className="text-sm font-black text-rose-400 font-mono">
+              -₹{(currentPoint.depreciation_loss || 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[9px] text-slate-500 truncate">
+              Cumulative loss
+            </div>
+          </div>
+
+          {/* Metric 3: Annual Fuel Expense */}
+          <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+              <span>Annual Fuel</span>
+              <Fuel size={11} className="text-amber-400" />
+            </div>
+            <div className="text-sm font-black text-amber-300 font-mono">
+              ₹{(currentPoint.annual_fuel_cost || 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[9px] text-slate-500 truncate">
+              {(annualKms || 10000).toLocaleString('en-IN')} km/yr
+            </div>
+          </div>
+
+          {/* Metric 4: Annual Maintenance & Service */}
+          <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+              <span>Service & Care</span>
+              <Wrench size={11} className="text-blue-400" />
+            </div>
+            <div className="text-sm font-black text-blue-300 font-mono">
+              ₹{(currentPoint.annual_maintenance || 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[9px] text-slate-500 truncate">
+              Scheduled + Wear
+            </div>
+          </div>
+
+          {/* Metric 5: Cumulative TCO */}
+          <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+              <span>Cumulative TCO</span>
+              <Shield size={11} className="text-indigo-400" />
+            </div>
+            <div className="text-sm font-black text-indigo-300 font-mono">
+              ₹{(currentPoint.cumulative_tco || 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[9px] text-slate-500 truncate">
+              All-inclusive cost
+            </div>
+          </div>
+
+          {/* Metric 6: Net Cost per KM */}
+          <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500/10 to-cyan-500/10 border border-indigo-500/20">
+            <div className="flex items-center justify-between text-[10px] text-cyan-300 mb-0.5">
+              <span>Net Cost / KM</span>
+              <span className="text-[9px] font-mono text-slate-400">eff.</span>
+            </div>
+            <div className="text-sm font-black text-white font-mono">
+              ₹{currentPoint.net_cost_per_km || 0}
+            </div>
+            <div className="text-[9px] text-cyan-400 truncate">
+              ₹{(currentPoint.monthly_cost || 0).toLocaleString('en-IN')}/mo
+            </div>
+          </div>
+
+        </div>
+
+        {/* Row 3: Strategic AI Advice Note for Active Year */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[11px] text-slate-300">
+          <Info size={13} className="text-indigo-400 shrink-0" />
+          <span>
+            <strong className="text-white">Year {activeYear} Analysis:</strong> {yearInsight.tip}
+          </span>
+        </div>
+
       </div>
     </div>
   )
