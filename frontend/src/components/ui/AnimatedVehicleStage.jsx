@@ -12,9 +12,6 @@ import {
   CloudRain, 
   Volume2, 
   VolumeX, 
-  FastForward,
-  Sparkles,
-  Shield,
   Fuel
 } from 'lucide-react'
 
@@ -39,9 +36,12 @@ class EngineAudio {
   }
 
   start(rpm = 2500) {
-    if (this.isMuted || !this.ctx) return
+    if (this.isMuted) return
+    this.init()
+    if (!this.ctx) return
+
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume()
+      this.ctx.resume().catch(() => {})
     }
     if (this.osc1) return
 
@@ -54,14 +54,16 @@ class EngineAudio {
       this.osc1.type = 'sawtooth'
       this.osc2.type = 'triangle'
 
-      const freq = Math.max(30, (rpm / 60) * 1.5)
+      const freq = Math.max(28, (rpm / 60) * 1.4)
       this.osc1.frequency.setValueAtTime(freq, this.ctx.currentTime)
       this.osc2.frequency.setValueAtTime(freq * 0.5, this.ctx.currentTime)
 
       this.filterNode.type = 'lowpass'
-      this.filterNode.frequency.setValueAtTime(450, this.ctx.currentTime)
+      this.filterNode.frequency.setValueAtTime(420, this.ctx.currentTime)
 
-      this.gainNode.gain.setValueAtTime(0.04, this.ctx.currentTime)
+      // Smooth volume ramp
+      this.gainNode.gain.setValueAtTime(0.001, this.ctx.currentTime)
+      this.gainNode.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.1)
 
       this.osc1.connect(this.filterNode)
       this.osc2.connect(this.filterNode)
@@ -71,28 +73,37 @@ class EngineAudio {
       this.osc1.start()
       this.osc2.start()
     } catch (e) {
-      console.warn('Web Audio synthesis not allowed yet without user gesture')
+      // Audio playback gesture pending
     }
   }
 
   setRPM(rpm) {
     if (!this.ctx || !this.osc1) return
-    const freq = Math.max(30, (rpm / 60) * 1.6)
-    this.osc1.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05)
-    this.osc2.frequency.setTargetAtTime(freq * 0.5, this.ctx.currentTime, 0.05)
+    try {
+      const freq = Math.max(28, (rpm / 60) * 1.4)
+      this.osc1.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05)
+      this.osc2.frequency.setTargetAtTime(freq * 0.5, this.ctx.currentTime, 0.05)
+    } catch (e) {}
   }
 
   stop() {
-    if (this.osc1) {
+    if (this.gainNode && this.ctx) {
       try {
-        this.osc1.stop()
-        this.osc2.stop()
-        this.osc1.disconnect()
-        this.osc2.disconnect()
+        this.gainNode.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.04)
       } catch (e) {}
-      this.osc1 = null
-      this.osc2 = null
     }
+    setTimeout(() => {
+      if (this.osc1) {
+        try {
+          this.osc1.stop()
+          this.osc2.stop()
+          this.osc1.disconnect()
+          this.osc2.disconnect()
+        } catch (e) {}
+        this.osc1 = null
+        this.osc2 = null
+      }
+    }, 50)
   }
 }
 
@@ -126,15 +137,19 @@ export function AnimatedVehicleStage({
   annualKms = 10000
 }) {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playbackSpeed, setPlaybackSpeed] = useState(1) // 1x, 2x
+  const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [soundEnabled, setSoundEnabled] = useState(false)
-  const [environment, setEnvironment] = useState('midnight') // 'midnight', 'golden', 'monsoon'
+  const [environment, setEnvironment] = useState('midnight')
   const [bodyStyle, setBodyStyle] = useState(vehicleType === 'bike' ? 'cruiser' : 'suv')
+
+  // Auto-sync bodyStyle when vehicleType toggles
+  useEffect(() => {
+    setBodyStyle(vehicleType === 'bike' ? 'cruiser' : 'suv')
+  }, [vehicleType])
 
   const brandColor = getBrandColor(brand, vehicleType)
   const maxYear = timeline.length > 0 ? timeline[timeline.length - 1].year : 5
   const currentPoint = timeline.find((p) => p.year === activeYear) || timeline[0] || {}
-  const prevPoint = activeYear > 0 ? timeline.find((p) => p.year === activeYear - 1) || timeline[0] : null
   const isOptimal = activeYear === optimalYear
 
   // Simulated live speed and RPM values
@@ -145,7 +160,7 @@ export function AnimatedVehicleStage({
   // Sync Audio with Playback and RPM
   useEffect(() => {
     if (isPlaying && soundEnabled) {
-      engineAudio.init()
+      engineAudio.isMuted = false
       engineAudio.start(simulatedRPM)
     } else {
       engineAudio.stop()
@@ -155,13 +170,20 @@ export function AnimatedVehicleStage({
     }
   }, [isPlaying, soundEnabled])
 
+  // Stop audio on component unmount
+  useEffect(() => {
+    return () => {
+      engineAudio.stop()
+    }
+  }, [])
+
   useEffect(() => {
     if (isPlaying && soundEnabled) {
       engineAudio.setRPM(simulatedRPM)
     }
   }, [simulatedRPM, isPlaying, soundEnabled])
 
-  // Playback Loop
+  // Playback Loop: Stop smoothly at maxYear without glitching
   useEffect(() => {
     let interval = null
     if (isPlaying) {
@@ -170,7 +192,7 @@ export function AnimatedVehicleStage({
         onYearSelect((prev) => {
           if (prev >= maxYear) {
             setIsPlaying(false)
-            return 0
+            return maxYear
           }
           return prev + 1
         })
@@ -181,30 +203,31 @@ export function AnimatedVehicleStage({
     }
   }, [isPlaying, playbackSpeed, maxYear, onYearSelect])
 
-  // Horizontal position
-  const vehicleProgressPct = maxYear > 0 ? (activeYear / maxYear) * 68 + 16 : 50
+  // Horizontal position clamp (12% to 82% to prevent overflow)
+  const vehicleProgressPct = maxYear > 0 ? (activeYear / maxYear) * 65 + 15 : 50
 
   // Environment styles
   const envStyles = {
     midnight: {
       bg: 'from-[#0e111d] via-[#090b14] to-[#05060a]',
       roadBorder: 'border-cyan-500/30',
-      dashColor: 'from-amber-400 via-amber-300 to-amber-400',
-      skyElement: 'stars'
+      dashColor: 'from-amber-400 via-amber-300 to-amber-400'
     },
     golden: {
       bg: 'from-[#2e1065] via-[#4c1d95] to-[#0f172a]',
       roadBorder: 'border-amber-500/40',
-      dashColor: 'from-yellow-300 via-amber-200 to-yellow-300',
-      skyElement: 'sun'
+      dashColor: 'from-yellow-300 via-amber-200 to-yellow-300'
     },
     monsoon: {
       bg: 'from-[#0f172a] via-[#1e293b] to-[#020617]',
       roadBorder: 'border-blue-400/40',
-      dashColor: 'from-cyan-300 via-teal-200 to-cyan-300',
-      skyElement: 'rain'
+      dashColor: 'from-cyan-300 via-teal-200 to-cyan-300'
     }
-  }[environment]
+  }[environment] || {
+    bg: 'from-[#0e111d] via-[#090b14] to-[#05060a]',
+    roadBorder: 'border-cyan-500/30',
+    dashColor: 'from-amber-400 via-amber-300 to-amber-400'
+  }
 
   return (
     <div className={`relative w-full overflow-hidden rounded-2xl bg-gradient-to-b ${envStyles.bg} border border-white/[0.1] shadow-2xl p-5 mb-5 select-none transition-all duration-700`}>
@@ -221,18 +244,18 @@ export function AnimatedVehicleStage({
       {/* 🌧️ Monsoon Rain Streaks */}
       {environment === 'monsoon' && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
-          {[...Array(24)].map((_, i) => (
+          {[...Array(20)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-[1.5px] bg-gradient-to-b from-transparent via-cyan-300/40 to-transparent"
               style={{
-                left: `${(i * 4.2) % 100}%`,
+                left: `${(i * 5) % 100}%`,
                 top: `-20px`,
                 height: `${20 + (i % 5) * 8}px`
               }}
               animate={{
                 y: [0, 320],
-                x: [0, -40]
+                x: [0, -35]
               }}
               transition={{
                 duration: 0.5 + (i % 4) * 0.1,
@@ -357,8 +380,14 @@ export function AnimatedVehicleStage({
           <button
             type="button"
             onClick={() => {
-              setSoundEnabled(!soundEnabled)
-              engineAudio.isMuted = soundEnabled
+              const next = !soundEnabled
+              setSoundEnabled(next)
+              engineAudio.isMuted = !next
+              if (next && isPlaying) {
+                engineAudio.start(simulatedRPM)
+              } else {
+                engineAudio.stop()
+              }
             }}
             title={soundEnabled ? 'Engine Audio Active' : 'Engine Audio Muted'}
             className={`p-1.5 rounded-lg cursor-pointer transition-all ${soundEnabled ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
@@ -380,7 +409,12 @@ export function AnimatedVehicleStage({
 
           <button
             type="button"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={() => {
+              if (activeYear >= maxYear && !isPlaying) {
+                onYearSelect(0)
+              }
+              setIsPlaying(!isPlaying)
+            }}
             className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 cursor-pointer transition-all"
           >
             {isPlaying ? <Pause size={13} /> : <Play size={13} />}
@@ -536,7 +570,7 @@ export function AnimatedVehicleStage({
         </AnimatePresence>
 
         {/* 🚗 MOVING VEHICLE STAGE AREA */}
-        <div className="relative w-full h-28 mb-3">
+        <div className="relative w-full h-28 mb-3 overflow-hidden">
           <motion.div
             className="absolute bottom-1 z-20"
             animate={{
@@ -554,7 +588,7 @@ export function AnimatedVehicleStage({
               
               {/* Dynamic Headlight Light Cone */}
               <div 
-                className="absolute top-7 left-24 w-52 h-14 pointer-events-none animate-beam"
+                className="absolute top-7 left-24 w-44 h-12 pointer-events-none animate-beam"
                 style={{
                   background: 'linear-gradient(90deg, rgba(255,255,255,0.45) 0%, rgba(34,211,238,0.2) 35%, transparent 100%)',
                   clipPath: 'polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%)'
