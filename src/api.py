@@ -6,8 +6,9 @@ import os
 import threading
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Optional, Tuple, cast
+from typing import Any, List, Literal, Optional, Tuple, cast
 
 import joblib
 import pandas as pd
@@ -29,6 +30,9 @@ except ImportError:
 from src.contracts import (
     AGE_MAX,
     AGE_MIN,
+    ANNUAL_KM_BIKE,
+    ANNUAL_KM_CAR,
+    BATCH_PREDICT_MAX_ITEMS,
     BIKE_BRANDS,
     CAR_AGE_MAX,
     CAR_AGE_MIN,
@@ -183,13 +187,15 @@ def get_model(vehicle_type: str = "bike") -> Tuple[Any, Optional[dict]]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Preload models at startup
+    _load_artifacts()
     yield
 
 
 app = FastAPI(
     title="AutoValuate AI — Used Vehicle Price Predictor",
-    description="API for estimating the resale value of used motorcycles and cars in India",
-    version="2.0.0",
+    description="API for estimating the resale value, future depreciation, and value drivers of used motorcycles and cars in India",
+    version="2.5.0",
     lifespan=lifespan,
 )
 
@@ -216,7 +222,7 @@ def verify_api_key(x_api_key: str = Header("None")):
         raise HTTPException(status_code=401, detail="Invalid or Missing API Key")
 
 
-# ── REQUEST SCHEMAS ────────────────────────────────────────────────
+# ── REQUEST & RESPONSE SCHEMAS ─────────────────────────────────────
 
 
 class BikeFeatures(BaseModel):
@@ -333,6 +339,22 @@ class PriceRange(BaseModel):
     confidence_interval: float = 0.80
 
 
+class WaterfallItem(BaseModel):
+    factor: str
+    impact: float
+    direction: Literal["positive", "negative", "neutral"]
+    description: str
+
+
+class DepreciationForecastItem(BaseModel):
+    year_offset: int
+    calendar_year: int
+    age: float
+    kms_driven: float
+    estimated_price: float
+    retention_pct: float
+
+
 class PredictionResponse(BaseModel):
     vehicle_type: str = "bike"
     estimated_price: float
@@ -341,6 +363,26 @@ class PredictionResponse(BaseModel):
     prediction_quality: dict = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     adjustments: list[dict] = Field(default_factory=list)
+    waterfall_breakdown: list[WaterfallItem] = Field(default_factory=list)
+    depreciation_forecast: list[DepreciationForecastItem] = Field(default_factory=list)
+
+
+class BatchPredictionRequest(BaseModel):
+    vehicles: List[UniversalVehicleInput] = Field(
+        ..., max_length=BATCH_PREDICT_MAX_ITEMS
+    )
+
+
+class BatchPredictionSummary(BaseModel):
+    total_fleet_value: float
+    average_vehicle_price: float
+    vehicle_count: int
+    high_confidence_count: int
+
+
+class BatchPredictionResponse(BaseModel):
+    summary: BatchPredictionSummary
+    predictions: List[PredictionResponse]
 
 
 # ── INFERENCE INPUT PREPARATION ─────────────────────────────────────
@@ -488,6 +530,241 @@ def prepare_car_inference(
     return input_df, prediction_quality, warnings, adjustments
 
 
+# ── VALUE DRIVERS & FORECAST COMPUTATION ────────────────────────────
+
+
+def calculate_waterfall_breakdown(
+    v_type: str,
+    payload: UniversalVehicleInput | BikeFeatures | CarFeatures,
+    estimated_price: float,
+) -> list[WaterfallItem]:
+    """Calculate transparent marginal factor contributions (+/- ₹) towards the valuation."""
+    items: list[WaterfallItem] = []
+
+    if v_type == "bike":
+        power = float(
+            getattr(payload, "power", None) or getattr(payload, "engine_cc", 150.0)
+        )
+        age = float(payload.age)
+        kms = float(payload.kms_driven)
+        owner_rank = int(payload.owner_rank)
+        brand = str(payload.brand)
+
+        # Baseline reference for bikes: ~150cc commuter, 3 yrs, 20k km, 1st owner = ~₹55,000
+        baseline_price = 55000.0
+        items.append(
+            WaterfallItem(
+                factor="Market Baseline",
+                impact=baseline_price,
+                direction="neutral",
+                description="Standard 150cc 2-wheeler segment baseline value",
+            )
+        )
+
+        # 1. Displacement impact
+        cc_diff = power - 150.0
+        cc_impact = round(cc_diff * 180.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Engine Displacement ({int(power)}cc)",
+                impact=cc_impact,
+                direction="positive" if cc_impact >= 0 else "negative",
+                description="Power capacity premium above commuter standard",
+            )
+        )
+
+        # 2. Age Depreciation
+        age_impact = round(-max(0.0, age) * 4500.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Vehicle Age ({int(age)} yrs)",
+                impact=age_impact,
+                direction="negative" if age_impact < 0 else "neutral",
+                description="Time-based asset market depreciation",
+            )
+        )
+
+        # 3. Mileage wear
+        km_impact = round(-(kms / 1000.0) * 480.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Odometer ({int(kms):,} km)",
+                impact=km_impact,
+                direction="negative" if km_impact < 0 else "neutral",
+                description="Wear & tear from accumulated usage",
+            )
+        )
+
+        # 4. Ownership status
+        owner_impact = round(-(owner_rank - 1) * 6500.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Ownership (Rank {owner_rank})",
+                impact=owner_impact,
+                direction="negative" if owner_impact < 0 else "neutral",
+                description="Title transfers and previous owner discount",
+            )
+        )
+
+        # 5. Brand Prestige & Demand residual
+        sum_impacts = baseline_price + cc_impact + age_impact + km_impact + owner_impact
+        brand_impact = round(estimated_price - sum_impacts, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Brand Premium ({brand})",
+                impact=brand_impact,
+                direction="positive" if brand_impact >= 0 else "negative",
+                description="Brand resale retention & aftermarket liquidity",
+            )
+        )
+
+    else:
+        engine_cc = float(
+            getattr(payload, "engine_cc", None) or getattr(payload, "power", 1197.0)
+        )
+        age = float(payload.age)
+        kms = float(payload.kms_driven)
+        owner_rank = int(payload.owner_rank)
+        brand = str(payload.brand)
+        fuel = str(getattr(payload, "fuel", "Petrol"))
+
+        baseline_price = 400000.0
+        items.append(
+            WaterfallItem(
+                factor="Market Baseline",
+                impact=baseline_price,
+                direction="neutral",
+                description="Standard 1.2L passenger hatchback baseline value",
+            )
+        )
+
+        # 1. Engine & Fuel
+        cc_impact = round((engine_cc - 1197.0) * 140.0, -2)
+        if fuel.lower() == "diesel":
+            cc_impact += 35000.0
+        items.append(
+            WaterfallItem(
+                factor=f"Engine & Fuel ({int(engine_cc)}cc {fuel})",
+                impact=cc_impact,
+                direction="positive" if cc_impact >= 0 else "negative",
+                description="Displacement & powertrain fuel efficiency premium",
+            )
+        )
+
+        # 2. Age
+        age_impact = round(-max(0.0, age) * 28000.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Vehicle Age ({int(age)} yrs)",
+                impact=age_impact,
+                direction="negative" if age_impact < 0 else "neutral",
+                description="Automotive model year market depreciation",
+            )
+        )
+
+        # 3. Mileage
+        km_impact = round(-(kms / 1000.0) * 1600.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Odometer ({int(kms):,} km)",
+                impact=km_impact,
+                direction="negative" if km_impact < 0 else "neutral",
+                description="Mechanical usage and maintenance wear",
+            )
+        )
+
+        # 4. Owner
+        owner_impact = round(-(owner_rank - 1) * 42000.0, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Ownership (Rank {owner_rank})",
+                impact=owner_impact,
+                direction="negative" if owner_impact < 0 else "neutral",
+                description="Resale discount across multiple registrations",
+            )
+        )
+
+        # 5. Brand residual
+        sum_impacts = baseline_price + cc_impact + age_impact + km_impact + owner_impact
+        brand_impact = round(estimated_price - sum_impacts, -2)
+        items.append(
+            WaterfallItem(
+                factor=f"Brand Premium ({brand})",
+                impact=brand_impact,
+                direction="positive" if brand_impact >= 0 else "negative",
+                description="Manufacturer demand & secondary market liquidity",
+            )
+        )
+
+    return items
+
+
+def calculate_depreciation_forecast(
+    v_type: str,
+    payload: UniversalVehicleInput | BikeFeatures | CarFeatures,
+    model: Any,
+    metadata: dict | None,
+    current_price: float,
+) -> list[DepreciationForecastItem]:
+    """Generate 5-year future resale forecast simulating aging and mileage accumulation."""
+    forecast: list[DepreciationForecastItem] = []
+    current_year = datetime.now(timezone.utc).year
+    annual_km = ANNUAL_KM_BIKE if v_type == "bike" else ANNUAL_KM_CAR
+    floor_price = 1000.0 if v_type == "bike" else 25000.0
+
+    last_price = current_price
+    for offset in range(6):  # 0 to 5 years into future
+        future_age = float(payload.age) + offset
+        future_kms = float(payload.kms_driven) + (offset * annual_km)
+        cal_year = current_year + offset
+
+        if offset == 0:
+            price = current_price
+        else:
+            simulated_data = UniversalVehicleInput(
+                vehicle_type=v_type,
+                brand=payload.brand,
+                power=getattr(payload, "power", None),
+                engine_cc=getattr(payload, "engine_cc", None),
+                max_power_bhp=getattr(payload, "max_power_bhp", None),
+                fuel=getattr(payload, "fuel", "Petrol"),
+                transmission=getattr(payload, "transmission", "Manual"),
+                kms_driven=future_kms,
+                age=future_age,
+                owner_rank=int(payload.owner_rank),
+            )
+
+            if v_type == "car":
+                in_df, _, _, _ = prepare_car_inference(simulated_data, metadata)
+            else:
+                in_df, _, _, _ = prepare_bike_inference(simulated_data, metadata)
+
+            try:
+                raw_pred = float(model.predict(in_df)[0])
+                # Ensure realistic progressive depreciation (cannot gain value over time)
+                price = max(floor_price, min(last_price * 0.96, raw_pred))
+            except Exception:
+                price = max(floor_price, last_price * 0.88)
+
+        last_price = price
+        retention = (
+            round((price / current_price) * 100.0, 1) if current_price > 0 else 100.0
+        )
+
+        forecast.append(
+            DepreciationForecastItem(
+                year_offset=offset,
+                calendar_year=cal_year,
+                age=round(future_age, 1),
+                kms_driven=round(future_kms, 0),
+                estimated_price=round(price, 0),
+                retention_pct=retention,
+            )
+        )
+
+    return forecast
+
+
 # ── ENDPOINTS ───────────────────────────────────────────────────────
 
 
@@ -555,7 +832,7 @@ def contract_check(
     response_model=PredictionResponse,
     dependencies=[Depends(verify_api_key)],
 )
-@limiter.limit("20/minute")
+@limiter.limit("30/minute")
 def predict_price(request: Request, payload: UniversalVehicleInput):
     start_time = time.perf_counter()
     v_type = payload.vehicle_type
@@ -595,6 +872,14 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
         lower_bound = max(floor_price, round(price - margin, -2))
         upper_bound = round(price + margin, -2)
 
+        # Compute Waterfall Value Drivers
+        waterfall = calculate_waterfall_breakdown(v_type, payload, price)
+
+        # Compute 5-Year Depreciation Forecast
+        forecast = calculate_depreciation_forecast(
+            v_type, payload, model, metadata, price
+        )
+
         latency_ms = round((time.perf_counter() - start_time) * 1000)
         logger.info(
             f"{v_type.capitalize()} prediction completed",
@@ -619,6 +904,8 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
             prediction_quality=quality,
             warnings=warnings,
             adjustments=adjustments,
+            waterfall_breakdown=waterfall,
+            depreciation_forecast=forecast,
         )
     except Exception as exc:
         latency_ms = round((time.perf_counter() - start_time) * 1000)
@@ -631,3 +918,36 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
             status_code=500,
             detail="Prediction failed due to internal model error.",
         )
+
+
+@app.post(
+    "/predict/batch",
+    response_model=BatchPredictionResponse,
+    dependencies=[Depends(verify_api_key)],
+)
+@limiter.limit("20/minute")
+def predict_batch(request: Request, batch_payload: BatchPredictionRequest):
+    """Bulk valuation endpoint for fleet management and dealership inventories."""
+    results: list[PredictionResponse] = []
+    total_val = 0.0
+    high_conf_count = 0
+
+    for item in batch_payload.vehicles:
+        res = predict_price(request, item)
+        results.append(res)
+        total_val += res.estimated_price
+        if res.prediction_quality.get("level") == "high":
+            high_conf_count += 1
+
+    count = len(results)
+    avg_val = round(total_val / count, 0) if count > 0 else 0.0
+
+    return BatchPredictionResponse(
+        summary=BatchPredictionSummary(
+            total_fleet_value=round(total_val, 0),
+            average_vehicle_price=avg_val,
+            vehicle_count=count,
+            high_confidence_count=high_conf_count,
+        ),
+        predictions=results,
+    )

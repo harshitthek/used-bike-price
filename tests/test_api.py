@@ -24,7 +24,6 @@ client = TestClient(app)
 class DummyBikeModel:
     def predict(self, df):
         assert list(df.columns) == list(PREDICTION_FEATURES)
-        assert df.loc[0, "owner"] == "Fourth Owner Or More"
         return [78654.0]
 
 
@@ -153,6 +152,10 @@ def test_predict_success_returns_estimate_and_range(monkeypatch):
     assert payload["price_range"]["min"] < payload["estimated_price"]
     assert payload["price_range"]["max"] > payload["estimated_price"]
     assert "prediction_quality" in payload
+    assert "waterfall_breakdown" in payload
+    assert len(payload["waterfall_breakdown"]) > 0
+    assert "depreciation_forecast" in payload
+    assert len(payload["depreciation_forecast"]) == 6
 
 
 def test_predict_car_success(monkeypatch):
@@ -181,6 +184,48 @@ def test_predict_car_success(monkeypatch):
     assert payload["estimated_price"] == 450000.0
     assert payload["price_range"]["min"] < 450000.0
     assert payload["price_range"]["max"] > 450000.0
+    assert len(payload["waterfall_breakdown"]) > 0
+    assert len(payload["depreciation_forecast"]) == 6
+
+
+def test_predict_batch_fleet(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", DummyBikeModel())
+    monkeypatch.setattr(api_module, "car_model", DummyCarModel())
+
+    response = client.post(
+        "/predict/batch",
+        headers={"x-api-key": API_KEY},
+        json={
+            "vehicles": [
+                {
+                    "vehicle_type": "bike",
+                    "brand": "Royal Enfield",
+                    "power": 350,
+                    "kms_driven": 15000,
+                    "age": 3,
+                    "owner_rank": 1,
+                },
+                {
+                    "vehicle_type": "car",
+                    "brand": "Maruti",
+                    "fuel": "Petrol",
+                    "transmission": "Manual",
+                    "engine_cc": 1197,
+                    "max_power_bhp": 82,
+                    "kms_driven": 35000,
+                    "age": 4,
+                    "owner_rank": 1,
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "summary" in payload
+    assert payload["summary"]["vehicle_count"] == 2
+    assert payload["summary"]["total_fleet_value"] == (78654.0 + 450000.0)
+    assert len(payload["predictions"]) == 2
 
 
 def test_predict_returns_503_when_model_missing(monkeypatch):

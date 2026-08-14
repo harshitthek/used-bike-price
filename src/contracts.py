@@ -11,6 +11,11 @@ from typing import Dict, List, Tuple
 # Supported vehicle types
 VEHICLE_TYPES: Tuple[str, ...] = ("bike", "car")
 
+# Annual usage estimates for forecasting
+ANNUAL_KM_BIKE: float = 6000.0
+ANNUAL_KM_CAR: float = 12000.0
+BATCH_PREDICT_MAX_ITEMS: int = 50
+
 # ── BIKE CONSTANTS (Backwards Compatible) ──────────────────────────
 POWER_MIN: float = 50.0
 POWER_MAX: float = 2500.0

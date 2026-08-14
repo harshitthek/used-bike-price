@@ -358,3 +358,14 @@ To expand from a two-wheeler estimator into a comprehensive automotive valuation
 - Upgraded [`frontend/src/App.jsx`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/frontend/src/App.jsx) with a Vehicle Mode Switcher (🏍️ Bikes | 🚗 Cars), 1-click popular presets, and car-specific fuel/transmission controls.
 - Consolidated ADRs and added [`ADR 007: Dual-Engine Vehicle Architecture`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/architecture/adr/007-dual-engine-bike-and-car-architecture.md).
 
+## 23. Phase 18 — AutoValuate Pro Suite (Forecast, Comparison, Waterfall & Fleet Batch)
+We introduced advanced valuation intelligence and analytics across the full stack:
+
+- **5-Year Future Depreciation Forecast**: The API computes forward projections simulating annual aging and mileage accumulation ($+6,000\text{ km/yr}$ for bikes, $+12,000\text{ km/yr}$ for cars) across $t \in [0, 5]$ years.
+- **Interactive SVG Forecast Curve**: Displays dynamic bezier curve area graphs with milestone pins and retention percentages.
+- **Value Drivers Waterfall Visualizer**: Computes transparent marginal contributions ($+/-₹$) across displacement, age, mileage, ownership, and brand prestige vs segment baselines.
+- **Side-by-Side Comparison Mode**: Dual interactive forms comparing two vehicles simultaneously with real-time value differential badges.
+- **Bulk Fleet Valuation API (`POST /predict/batch`)**: Vectorised multi-vehicle batch appraisal for dealerships and fleet managers.
+- **Official Valuation Certificate Modal**: High-resolution printable inspection certificate with QR code authenticity watermark.
+
+
