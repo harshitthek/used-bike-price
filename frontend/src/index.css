@@ -203,6 +203,53 @@ input[type=range]::-webkit-slider-thumb:hover {
   animation: warning-pulse 2s ease-in-out infinite;
 }
 
+/* Highway Road & Vehicle Animations */
+@keyframes road-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-60px); }
+}
+
+.animate-road-fast {
+  animation: road-scroll 0.35s linear infinite;
+}
+
+.animate-road-medium {
+  animation: road-scroll 0.7s linear infinite;
+}
+
+.animate-road-slow {
+  animation: road-scroll 1.2s linear infinite;
+}
+
+@keyframes wheel-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-wheel-spin {
+  animation: wheel-spin 0.35s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes exhaust-drift {
+  0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-25px, 3px) scale(1.8); }
+}
+
+.animate-exhaust-particle {
+  animation: exhaust-drift 0.5s ease-out infinite;
+}
+
+@keyframes beam-flicker {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.85; }
+}
+
+.animate-beam {
+  animation: beam-flicker 2.5s ease-in-out infinite;
+}
+
+
 /* Print Certificate Rules */
 @media print {
   body {

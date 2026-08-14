@@ -34,8 +34,10 @@ import {
 } from 'lucide-react'
 import { NumberTicker } from "@/components/ui/NumberTicker"
 import { GlassCard } from "@/components/ui/GlassCard"
+import { AnimatedVehicleStage } from "@/components/ui/AnimatedVehicleStage"
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
+
 const REQUEST_TIMEOUT_MS = 10000
 
 // ── POPULAR PRESETS ──────────────────────────────────────────────────
@@ -1786,8 +1788,20 @@ Verification: 92.0% Empirical Machine Learning Confidence`
 
                 {simResult && (
                   <>
+                    {/* 🏎️ Animated Highway & Vehicle Simulation Stage */}
+                    <AnimatedVehicleStage
+                      vehicleType={simData.vehicle_type}
+                      brand={simData.brand}
+                      timeline={simResult.timeline}
+                      activeYear={simActiveYear ?? simResult.optimal_sell_window.recommended_sell_year}
+                      onYearSelect={setSimActiveYear}
+                      optimalYear={simResult.optimal_sell_window.recommended_sell_year}
+                      annualKms={simData.annual_kms}
+                    />
+
                     {/* Top 4 Summary Metrics */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
                       <GlassCard className="p-3.5 border-white/[0.08]">
                         <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Projected Resale</span>
                         <div className="text-lg font-black text-white font-mono">
