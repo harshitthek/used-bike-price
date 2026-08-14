@@ -383,3 +383,51 @@ def test_new_vehicle_zero_age_allowed(monkeypatch):
     assert payload["estimated_price"] > 0
     # Age 0.0 should not be marked as OOD
     assert "age" not in payload["prediction_quality"]["ood_features"]
+
+
+def test_demo_estimate_get(monkeypatch):
+    monkeypatch.setattr(api_module, "bike_model", DummyBikeModel())
+    monkeypatch.setattr(api_module, "bike_metadata", {"metrics": {"rmse": 10000.0}})
+
+    # Call WITHOUT any x-api-key header
+    response = client.get(
+        "/api/v1/demo/estimate?vehicle_type=bike&brand=Royal%20Enfield&power=350&kms_driven=15000&age=3"
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert "formatted_price" in payload["valuation"]
+    assert "confidence_score" in payload["valuation"]
+    assert payload["vehicle"]["brand"] == "Royal Enfield"
+    assert payload["metadata"]["portfolio_demo"] is True
+
+
+def test_demo_estimate_post(monkeypatch):
+    monkeypatch.setattr(api_module, "car_model", DummyCarModel())
+    monkeypatch.setattr(api_module, "car_metadata", {"metrics": {"rmse": 80000.0}})
+
+    # Call WITHOUT any x-api-key header
+    response = client.post(
+        "/api/v1/demo/estimate",
+        json={
+            "vehicle_type": "car",
+            "brand": "Maruti",
+            "engine_cc": 1197,
+            "max_power_bhp": 82,
+            "kms_driven": 25000,
+            "age": 3,
+            "owner_rank": 1,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert "formatted_price" in payload["valuation"]
+    assert payload["vehicle"]["type"] == "car"
+
+
+def test_demo_widget_js():
+    response = client.get("/api/v1/demo/widget.js")
+    assert response.status_code == 200
+    assert "application/javascript" in response.headers.get("content-type", "")
+    assert "autovaluate-portfolio-widget" in response.text
