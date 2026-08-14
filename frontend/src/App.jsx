@@ -262,12 +262,36 @@ function App() {
     const numericFields = ['power', 'engine_cc', 'max_power_bhp', 'kms_driven', 'age', 'owner_rank']
     const parsedVal = numericFields.includes(name) ? Number(value) : value
 
+    if (name === 'brand') {
+      if (vehicleType === 'bike') {
+        const limits = activeContract?.ui?.brand_power_limits?.[value] || [100, 650]
+        const newMin = limits[0] || 100
+        const newMax = limits[1] || 650
+        setBikeData(prev => ({
+          ...prev,
+          brand: value,
+          power: prev.power > newMax ? newMax : prev.power < newMin ? newMin : prev.power
+        }))
+      } else {
+        const limits = activeContract?.ui?.brand_engine_limits?.[value] || [800, 2500]
+        const newMin = limits[0] || 800
+        const newMax = limits[1] || 2500
+        setCarData(prev => ({
+          ...prev,
+          brand: value,
+          engine_cc: prev.engine_cc > newMax ? newMax : prev.engine_cc < newMin ? newMin : prev.engine_cc
+        }))
+      }
+      return
+    }
+
     if (vehicleType === 'bike') {
       setBikeData(prev => ({ ...prev, [name]: parsedVal }))
     } else {
       setCarData(prev => ({ ...prev, [name]: parsedVal }))
     }
   }
+
 
   const applyPreset = (presetData) => {
     if (vehicleType === 'bike') {
@@ -548,7 +572,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
           <div className="hidden lg:flex items-center gap-3 text-xs text-slate-400">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              92.0% R² Verified
+              97.4% R² Verified
             </div>
           </div>
         </div>
@@ -579,8 +603,8 @@ Verification: 92.0% Empirical Machine Learning Confidence`
               </h2>
               <p className="text-slate-400 text-xs md:text-sm max-w-lg mx-auto">
                 {vehicleType === 'bike'
-                  ? 'Trained on 7,000+ authentic Indian two-wheelers. Includes 5-year depreciation forecast and marginal price drivers.'
-                  : 'Trained on 6,700+ authentic Indian passenger cars. Multi-feature valuation across fuel, transmission, and power.'}
+                  ? 'Trained on 32,000+ authentic Indian two-wheelers. Includes 5-year depreciation forecast and marginal price drivers.'
+                  : 'Trained on 8,000+ authentic Indian passenger cars. Multi-feature valuation across fuel, transmission, and power.'}
               </p>
             </motion.div>
 
@@ -758,7 +782,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                     </div>
                   )}
 
-                  {/* Sliders Grid */}
+                  {/* Sliders Grid with Dynamic Brand Bounds */}
                   <div className="grid sm:grid-cols-3 gap-6 mb-7">
                     {vehicleType === 'bike' ? (
                       <SliderField
@@ -766,9 +790,12 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                         label="Engine Power"
                         unit="cc"
                         value={bikeData.power}
-                        min={50}
-                        max={activeContract?.schema?.properties?.power?.maximum || 2500}
-                        step={25}
+                        min={activeContract?.ui?.brand_power_limits?.[bikeData.brand]?.[0] || 97}
+                        max={activeContract?.ui?.brand_power_limits?.[bikeData.brand]?.[1] || 650}
+                        step={
+                          (activeContract?.ui?.brand_power_limits?.[bikeData.brand]?.[1] || 650) -
+                          (activeContract?.ui?.brand_power_limits?.[bikeData.brand]?.[0] || 97) > 300 ? 25 : 10
+                        }
                         onChange={(v) => handleFieldChange('power', v)}
                       />
                     ) : (
@@ -777,8 +804,8 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                         label="Engine Capacity"
                         unit="cc"
                         value={carData.engine_cc}
-                        min={600}
-                        max={4000}
+                        min={activeContract?.ui?.brand_engine_limits?.[carData.brand]?.[0] || 793}
+                        max={activeContract?.ui?.brand_engine_limits?.[carData.brand]?.[1] || 2500}
                         step={50}
                         onChange={(v) => handleFieldChange('engine_cc', v)}
                       />
@@ -807,6 +834,7 @@ Verification: 92.0% Empirical Machine Learning Confidence`
                       formatValue={(v) => Number(v).toLocaleString('en-IN')}
                     />
                   </div>
+
 
                   {/* Ownership Selector */}
                   <div className="mb-7">

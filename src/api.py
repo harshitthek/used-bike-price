@@ -33,11 +33,13 @@ from src.contracts import (
     ANNUAL_KM_BIKE,
     ANNUAL_KM_CAR,
     BATCH_PREDICT_MAX_ITEMS,
+    BIKE_BRAND_POWER_LIMITS,
     BIKE_BRANDS,
     CAR_AGE_MAX,
     CAR_AGE_MIN,
     CAR_BHP_MAX,
     CAR_BHP_MIN,
+    CAR_BRAND_ENGINE_LIMITS,
     CAR_BRANDS,
     CAR_ENGINE_MAX,
     CAR_ENGINE_MIN,
@@ -405,6 +407,35 @@ def prepare_bike_inference(
     power_val = getattr(data, "power", None) or getattr(data, "engine_cc", 150.0)
     owner_str = OWNER_RANK_TO_LABEL.get(data.owner_rank, "First Owner")
 
+    # Brand-specific displacement ceiling check
+    brand_name = data.brand
+    if brand_name in BIKE_BRAND_POWER_LIMITS:
+        b_min, b_max = BIKE_BRAND_POWER_LIMITS[brand_name]
+        if power_val > b_max:
+            ood_features.append("power")
+            adjustments.append(
+                {
+                    "feature": "power",
+                    "reason": f"brand_displacement_ceiling_{brand_name}",
+                    "original": power_val,
+                    "adjusted": b_max,
+                }
+            )
+            warnings.append(
+                f"{brand_name} maximum engine displacement in India is {int(b_max)}cc; input clamped from {int(power_val)}cc."
+            )
+            power_val = b_max
+        elif power_val < b_min:
+            adjustments.append(
+                {
+                    "feature": "power",
+                    "reason": f"brand_displacement_floor_{brand_name}",
+                    "original": power_val,
+                    "adjusted": b_min,
+                }
+            )
+            power_val = b_min
+
     input_dict = {
         "brand": data.brand,
         "owner": owner_str,
@@ -478,6 +509,35 @@ def prepare_car_inference(
     fuel_val = (getattr(data, "fuel", "Petrol") or "Petrol").capitalize()
     trans_val = (getattr(data, "transmission", "Manual") or "Manual").capitalize()
 
+    # Brand-specific engine ceiling check
+    brand_name = data.brand
+    if brand_name in CAR_BRAND_ENGINE_LIMITS:
+        c_min, c_max = CAR_BRAND_ENGINE_LIMITS[brand_name]
+        if engine_val > c_max:
+            ood_features.append("engine_cc")
+            adjustments.append(
+                {
+                    "feature": "engine_cc",
+                    "reason": f"brand_displacement_ceiling_{brand_name}",
+                    "original": engine_val,
+                    "adjusted": c_max,
+                }
+            )
+            warnings.append(
+                f"{brand_name} maximum engine capacity in India is {int(c_max)}cc; input clamped from {int(engine_val)}cc."
+            )
+            engine_val = c_max
+        elif engine_val < c_min:
+            adjustments.append(
+                {
+                    "feature": "engine_cc",
+                    "reason": f"brand_displacement_floor_{brand_name}",
+                    "original": engine_val,
+                    "adjusted": c_min,
+                }
+            )
+            engine_val = c_min
+
     input_dict = {
         "brand": data.brand,
         "fuel": fuel_val,
@@ -534,6 +594,56 @@ def prepare_car_inference(
     prediction_quality = {"level": quality_level, "ood_features": ood_features}
     input_df = pd.DataFrame([input_dict])[list(CAR_PREDICTION_FEATURES)]
     return input_df, prediction_quality, warnings, adjustments
+
+
+def apply_economic_depreciation_bounds(
+    v_type: str,
+    raw_prediction: float,
+    age: float,
+    kms: float,
+    owner_rank: int,
+    brand: str,
+) -> float:
+    """Enforce realistic compound physical and market economic depreciation for extreme aging / mileage."""
+    if age <= 2.0 and kms <= 15000.0:
+        return raw_prediction
+
+    # Compound empirical retention curves in Indian automotive market
+    # Age decay: ~8.5% annual exponential decay
+    age_retention = 1.0 / ((1.0 + 0.085 * max(0.0, age)) ** 1.35)
+    # Odometer wear decay
+    km_retention = 1.0 / (1.0 + 0.000016 * max(0.0, kms))
+    # Multiple title transfers
+    owner_retention = max(0.75, 1.0 - (max(1, owner_rank) - 1) * 0.08)
+
+    combined_factor = max(0.06, age_retention * km_retention * owner_retention)
+
+    # Benchmark prime value (approximate 1-2 yr benchmark)
+    if v_type == "bike":
+        if brand in ["Harley-Davidson", "Triumph", "Ducati", "BMW"]:
+            prime_base = 850000.0
+        elif brand == "Royal Enfield":
+            prime_base = 220000.0
+        elif brand in ["KTM", "Kawasaki"]:
+            prime_base = 280000.0
+        else:
+            prime_base = 110000.0
+        floor_scrap = 8000.0
+    else:
+        if brand in ["BMW", "Mercedes-Benz", "Audi", "Jaguar", "Volvo"]:
+            prime_base = 4500000.0
+        elif brand in ["Toyota", "Mahindra", "Jeep", "MG", "Kia"]:
+            prime_base = 1600000.0
+        else:
+            prime_base = 800000.0
+        floor_scrap = 35000.0
+
+    max_depreciated_cap = max(floor_scrap, prime_base * combined_factor * 1.30)
+
+    # If severe aging (>= 8 yrs) or high mileage (>= 40k km), bound by economic physics
+    if age >= 8.0 or kms >= 40000.0:
+        return min(raw_prediction, max_depreciated_cap)
+    return raw_prediction
 
 
 # ── VALUE DRIVERS & FORECAST COMPUTATION ────────────────────────────
@@ -818,6 +928,7 @@ def contract_check(
                 "fuels": CAR_FUEL_TYPES,
                 "transmissions": CAR_TRANSMISSION_TYPES,
                 "owner_rank_labels": OWNER_RANK_TO_LABEL,
+                "brand_engine_limits": CAR_BRAND_ENGINE_LIMITS,
             },
         }
 
@@ -829,6 +940,7 @@ def contract_check(
         "ui": {
             "brands": BIKE_BRANDS,
             "owner_rank_labels": OWNER_RANK_TO_LABEL,
+            "brand_power_limits": BIKE_BRAND_POWER_LIMITS,
         },
     }
 
@@ -866,7 +978,15 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
 
     try:
         prediction = float(model.predict(input_df)[0])
-        price = max(floor_price, prediction)
+        bounded_pred = apply_economic_depreciation_bounds(
+            v_type,
+            prediction,
+            float(payload.age),
+            float(payload.kms_driven),
+            int(payload.owner_rank),
+            str(payload.brand),
+        )
+        price = max(floor_price, bounded_pred)
 
         # Compute price range using residual standard error (80% confidence interval ~ 1.28 * RMSE)
         rmse = (
@@ -913,6 +1033,7 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
             waterfall_breakdown=waterfall,
             depreciation_forecast=forecast,
         )
+
     except Exception as exc:
         latency_ms = round((time.perf_counter() - start_time) * 1000)
         logger.error(
