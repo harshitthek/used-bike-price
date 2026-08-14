@@ -15,6 +15,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -1077,4 +1078,12 @@ def predict_batch(request: Request, batch_payload: BatchPredictionRequest):
             high_confidence_count=high_conf_count,
         ),
         predictions=results,
+    )
+
+
+# Mount compiled frontend SPA if dist/ exists (production mode / Docker)
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount(
+        "/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend"
     )

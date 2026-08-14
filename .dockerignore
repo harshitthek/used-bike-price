@@ -1,11 +1,11 @@
 .venv/
-__pycache__/
+**/__pycache__/
 *.pyc
+.pytest_cache/
 .git/
-.gitignore
-.vscode/
-.idea/
-frontend/
-
-# Dev containers and local only files
-.devcontainer/
+.github/
+catboost_info/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+Thumbs.db

@@ -1,38 +1,54 @@
-FROM python:3.12-slim
+# ==============================================================================
+# Multi-Stage Dockerfile for AutoValuate AI
+# Stage 1: Build React 19 Frontend SPA
+# Stage 2: Production Python 3.11 FastAPI Backend with ML Engines
+# ==============================================================================
 
-# Set environment variables
+# --- Stage 1: Build Frontend ---
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
+RUN npm ci --silent
+
+COPY frontend/ ./
+RUN npm run build
+
+# --- Stage 2: Production Backend Runtime ---
+FROM python:3.11-slim-bookworm AS production
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=utf-8 \
     PORT=8000
 
 WORKDIR /app
 
-# Create a non-root user
-RUN addgroup --system appgroup && adduser --system --group appuser
+# Install system runtime dependencies for CatBoost, LightGBM, and XGBoost
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install curl for HEALTHCHECK
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Install dependencies first to leverage Docker cache
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy application code and model artifacts
-COPY . .
+# Copy source code and pre-trained ML models
+COPY src/ ./src/
+COPY models/ ./models/
 
-# Change ownership to the non-root user
-RUN chown -R appuser:appgroup /app
+# Copy compiled frontend SPA from Stage 1 into frontend/dist/
+COPY --from=frontend-builder /app/frontend/dist/ ./frontend/dist/
 
-# Switch to the non-root user
+# Create non-root app user for container security
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
 USER appuser
 
-# Expose port
-EXPOSE $PORT
+EXPOSE 8000
 
-# Define Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT}/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://127.0.0.1:8000/health || exit 1
 
-# Start Uvicorn
-CMD ["sh", "-c", "uvicorn src.api:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
