@@ -368,4 +368,28 @@ We introduced advanced valuation intelligence and analytics across the full stac
 - **Bulk Fleet Valuation API (`POST /predict/batch`)**: Vectorised multi-vehicle batch appraisal for dealerships and fleet managers.
 - **Official Valuation Certificate Modal**: High-resolution printable inspection certificate with QR code authenticity watermark.
 
+## 24. Phase 19 — CatBoost + XGBoost Stacking Ensemble (97.4% R²)
+We upgraded the machine learning core from standalone gradient boosted models to an enterprise-grade weighted stacking ensemble:
+
+- Ingested 32,648 motorcycles and 8,128 passenger cars.
+- Integrated CatBoost with native categorical brand handling and XGBoost with deep decision trees.
+- Benchmarked performance:
+  - **Two-Wheelers**: $R^2 = 0.9742$ (97.4%), $\text{MAE} = ₹4,263$, $\text{MAPE} = 7.03\%$, $\text{RMSE} = ₹14,081$.
+  - **Passenger Cars**: $R^2 = 0.9727$ (97.3%), $\text{MAE} = ₹69,491$, $\text{MAPE} = 15.41\%$, $\text{RMSE} = ₹129,437$.
+
+## 25. Phase 20 — Production Docker & Vector PDF Engine
+- Created multi-stage `Dockerfile` (`node:20-alpine` frontend build $\to$ `python:3.11-slim-bookworm` backend runtime with OpenMP acceleration).
+- Single-command orchestration via `docker-compose.yml`.
+- Integrated `html2pdf.js` with dynamic code-splitting for 1-click vector PDF inspection certificate generation.
+
+## 26. Phase 21 — Portfolio Public Demo API & Real-Value Econometric Envelopes
+To allow seamless integration into developer portfolios, web widgets, and external microservices:
+
+- **Public Demo Endpoints**: Added `GET /api/v1/demo/estimate` and `POST /api/v1/demo/estimate` requiring no API keys with wildcard CORS (`allow_origins=["*"]`).
+- **1-Line Embeddable JavaScript Widget (`widget.js`)**: Automatically resolves `document.currentScript.src` for dynamic cross-origin cloud API communication.
+- **Empirical Econometric Envelopes**: Integrated compound non-linear age decay ($\frac{1}{(1 + 0.085 \times \text{Age})^{1.35}}$), mileage wear decay, multi-owner discounts, manufacturer displacement boundaries, and scrap salvage asymptote floors.
+- **Cloud Deployment**: Created `render.yaml` blueprint for 1-click zero-configuration deployment to Render.com and Railway.app.
+- **Test Suite**: Expanded test coverage to 26 unit and integration tests passing in $100\%$ green status.
+
+
 
