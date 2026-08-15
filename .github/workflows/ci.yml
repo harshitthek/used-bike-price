@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-checks:
+    name: 🐍 Backend Lint, Test & Docker Cache
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -23,6 +28,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Cache Pytest & Ruff test state
+      uses: actions/cache@v4
+      with:
+        path: |
+          .pytest_cache
+          .ruff_cache
+        key: ${{ runner.os }}-backend-test-cache-${{ hashFiles('src/**', 'tests/**') }}
+        restore-keys: |
+          ${{ runner.os }}-backend-test-cache-
+
     - name: Check code formatting (Black)
       run: |
         black --check src tests
@@ -31,15 +46,24 @@ jobs:
       run: |
         ruff check src tests
 
-    - name: Run tests (Pytest)
+    - name: Run Pytest Suite (58 tests)
       run: |
-        python -m pytest tests/
+        python -m pytest tests/ --import-mode=importlib
 
-    - name: Build Docker Image
-      run: |
-        docker build -t used-bike-price-api:latest .
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker Image with GitHub Actions layer cache
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: used-bike-price-api:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
   frontend-checks:
+    name: ⚛️ Frontend Test, Cache & Production Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +81,18 @@ jobs:
     - name: Install Node dependencies
       run: npm ci
 
-    - name: Run Frontend Tests (Vitest)
+    - name: Cache Vite & Vitest Transformation Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          frontend/node_modules/.vite
+          frontend/node_modules/.vitest
+        key: ${{ runner.os }}-vite-cache-${{ hashFiles('frontend/package-lock.json', 'frontend/src/**') }}
+        restore-keys: |
+          ${{ runner.os }}-vite-cache-${{ hashFiles('frontend/package-lock.json') }}
+          ${{ runner.os }}-vite-cache-
+
+    - name: Run Frontend Tests (Vitest 44 tests)
       run: npm test
 
     - name: Build Frontend Bundle
