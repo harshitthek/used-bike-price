@@ -293,6 +293,59 @@ graph TD
 
 ---
 
+## 📊 Machine Learning Performance & Seaborn Analytics
+
+AutoValuate AI features dedicated gradient-boosted stacking ensembles combining **CatBoost** (with native categorical brand embeddings) and **XGBoost** (with one-hot categorical matrices and tree depth regularization).
+
+### 🏆 Empirical Test Benchmark Suite
+
+| Vehicle Category | Model Architecture | Test $R^2$ | MAE (Mean Absolute Error) | RMSE | MAPE (%) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **🏍️ Motorcycles** | CatBoost (60%) + XGBoost (40%) | **94.41%** | **₹4,380** | ₹20,076 | **7.21%** |
+| **🚗 Passenger Cars** | CatBoost (60%) + XGBoost (40%) | **97.07%** | **₹71,749** (₹0.71L) | ₹126,777 | **16.04%** |
+
+---
+
+### 🏍️ Motorcycle Model Analytics & Market Diagnostics
+![Motorcycle Valuation Seaborn Dashboard](reports/figures/motorcycle_valuation_seaborn.png)
+
+* **Parity Plot (Actual vs. Predicted)**: Demonstrates tight linear correlation along the ideal $y=x$ dashed line across 32,000+ authentic Indian motorcycle transactions.
+* **Residual Error KDE**: Unbiased error curve strictly centered at zero ($\mu \approx 0$) with tight standard error boundaries ($\pm \text{MAE}$).
+* **Feature Importance Breakdown**: CatBoost feature contribution isolates **Engine Displacement (CC)**, **Vehicle Age**, and **Odometer Mileage** as top valuation drivers.
+* **Depreciation & Brand Corridor**: Visualizes non-linear depreciation decay across vehicle aging years and valuation spreads across Royal Enfield, KTM, Yamaha, Honda, and Bajaj.
+
+---
+
+### 🚗 Passenger Car Model Analytics & Market Diagnostics
+![Passenger Car Valuation Seaborn Dashboard](reports/figures/car_valuation_seaborn.png)
+
+* **Parity Plot (Actual vs. Predicted in Lakhs)**: Exceptional prediction density across the ₹1L to ₹80L market spectrum ($R^2 = 97.1\%$).
+* **Displacement vs. Resale Price**: Quantifies power-to-valuation scaling across Petrol, Diesel, and CNG fuel variants.
+* **Transmission Premium (Violinplot)**: Highlights significant price resilience for Automatic variants over Manual configurations across aging cycles.
+
+---
+
+### 📈 Executive Dual-Model Benchmark Summary
+![Dual Model Seaborn Summary](reports/figures/dual_model_seaborn_summary.png)
+
+* **Cross-Model Precision**: Side-by-side comparison of $R^2$ ($>94.4\%$), Mean Absolute Percentage Error (MAPE $\le 16.0\%$), and nominal currency errors.
+
+---
+
+### 🔄 Retrain Models & Regenerate Dashboards
+Retrain both models and re-export publication-grade Seaborn visual dashboards in a single command:
+
+```bash
+# Retrain all models and re-export Seaborn dashboards
+python -m src.retrain --dataset all
+
+# Retrain only motorcycles or cars
+python -m src.retrain --dataset bikes
+python -m src.retrain --dataset cars
+```
+
+---
+
 ## 📡 REST API Reference
 
 ### 1. Public Portfolio Demo (`GET /api/v1/demo/estimate`)
