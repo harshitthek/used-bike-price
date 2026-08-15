@@ -12,6 +12,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { apiPost } from '../hooks/useApi'
+import { generateCertificatePdf } from '../utils/generatePdf'
 
 export function CertificateModal({
   show,
@@ -37,62 +38,16 @@ export function CertificateModal({
     year: 'numeric'
   })
 
-  const handleDownloadPdf = async () => {
-    const element = document.getElementById('printable-valuation-certificate')
-    if (!element || downloadingPdf) return
+  const handleDownloadPdf = () => {
+    if (downloadingPdf || !result) return
     setDownloadingPdf(true)
 
-    const safetyTimer = setTimeout(() => setDownloadingPdf(false), 15000)
-
     try {
-      const clone = element.cloneNode(true)
-      clone.id = 'pdf-export-clone'
-      clone.querySelectorAll('.no-print, button, .animate-spin').forEach(el => el.remove())
-
-      Object.assign(clone.style, {
-        position: 'fixed',
-        left: '-9999px',
-        top: '0',
-        width: '680px',
-        backgroundColor: '#090b12',
-        color: '#ffffff',
-        border: 'none',
-        borderRadius: '0',
-        boxShadow: 'none',
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
-        padding: '32px',
-        zIndex: '-1',
-      })
-
-      document.body.appendChild(clone)
-      await new Promise(r => setTimeout(r, 100))
-
-      const html2pdfModule = await import('html2pdf.js')
-      const html2pdf = html2pdfModule.default || html2pdfModule
-
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `AutoValuate_Certificate_${formData?.brand || 'Vehicle'}_${vehicleType.toUpperCase()}.pdf`,
-        image: { type: 'jpeg', quality: 0.92 },
-        html2canvas: {
-          scale: 1.5,
-          useCORS: true,
-          backgroundColor: '#090b12',
-          logging: false,
-          removeContainer: true,
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }
-
-      await html2pdf().set(opt).from(clone).save()
-      clone.remove()
+      generateCertificatePdf({ result, formData, vehicleType })
     } catch (err) {
-      console.error('PDF generation failed:', err)
-      document.getElementById('pdf-export-clone')?.remove()
+      console.error('PDF generation error:', err)
     } finally {
-      clearTimeout(safetyTimer)
-      setDownloadingPdf(false)
+      setTimeout(() => setDownloadingPdf(false), 300)
     }
   }
 
