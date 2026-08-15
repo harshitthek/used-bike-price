@@ -26,6 +26,17 @@ export function CertificateModal({
   const [copiedShare, setCopiedShare] = useState(false)
   const [shareError, setShareError] = useState(null)
 
+  // Lock background page scroll when modal is open
+  React.useEffect(() => {
+    if (show) {
+      const prevOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prevOverflow
+      }
+    }
+  }, [show])
+
   if (!show || !result) return null
 
   const certId = result.metadata?.timestamp 
@@ -75,10 +86,16 @@ export function CertificateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div 
         id="printable-valuation-certificate" 
-        className="relative w-full max-w-2xl rounded-2xl bg-[#090b12] border border-white/20 p-8 shadow-2xl print-certificate-container text-white"
+        className="relative w-full max-w-2xl my-auto rounded-2xl bg-[#090b12] border border-white/20 p-8 shadow-2xl print-certificate-container text-white"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6 no-print">

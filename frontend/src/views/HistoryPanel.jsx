@@ -23,12 +23,29 @@ export function HistoryPanel({
   onClearHistory,
   onExportHistory
 }) {
+  // Lock background page scroll when panel is open
+  React.useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prevOverflow
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overscroll-contain"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div 
         className="w-full max-w-md bg-[#090b12] border-l border-white/10 h-full flex flex-col p-6 shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Panel Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">

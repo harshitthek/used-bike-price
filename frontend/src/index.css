@@ -32,13 +32,19 @@
   --color-danger: #f43f5e;
 }
 
-/* Base Body */
+/* Base HTML & Body */
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
   background-image: 
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.18), transparent 70%),
     radial-gradient(ellipse 60% 40% at 90% 100%, rgba(6, 182, 212, 0.08), transparent 60%);
