@@ -8,15 +8,15 @@ The application is containerized using a multi-stage Docker build to minimize th
 
 ```mermaid
 graph TD
-    Stage1["Stage 1: node:20-alpine (Frontend Builder)"] --> Build[npm ci & npm run build]
-    Build --> Dist[dist/ static assets]
+    Stage1["Stage 1: node:20-alpine (Frontend Builder)"] --> Build["npm ci & npm run build"]
+    Build --> Dist["dist/ static assets"]
     
-    Stage2["Stage 2: python:3.11-slim-bookworm (Production)"] --> Install[Install Python Dependencies]
-    Install --> Copy[Copy Source & Model Artifacts]
-    Copy --> CopyDist[Copy dist/ from Stage 1]
-    CopyDist --> User[Switch to non-root user 'appuser']
-    User --> Expose[Expose Port 8000]
-    Expose --> Command[CMD uvicorn src.api:app]
+    Stage2["Stage 2: python:3.11-slim-bookworm (Production)"] --> Install["Install Python Dependencies"]
+    Install --> Copy["Copy Source & Model Artifacts"]
+    Copy --> CopyDist["Copy dist/ from Stage 1"]
+    CopyDist --> User["Switch to non-root user 'appuser'"]
+    User --> Expose["Expose Port 8000"]
+    Expose --> Command["CMD uvicorn src.api:app"]
 ```
 
 ### Security & Optimization

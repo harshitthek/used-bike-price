@@ -6,9 +6,7 @@ Motorcycle, Passenger Car, and Executive Benchmark ML pipelines.
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -19,9 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import joblib
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import seaborn as sns

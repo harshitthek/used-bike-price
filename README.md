@@ -192,19 +192,25 @@ Standard gradient-boosted tree regressors can suffer from out-of-distribution le
 
 ```mermaid
 graph TD
-    RawInput[Raw User Input] --> BrandGuard[1. Brand Displacement Ceiling Check]
-    BrandGuard --> TreeEnsemble[2. CatBoost + XGBoost Stacking Ensemble]
-    TreeEnsemble --> EconBounds[3. Multi-Stage Econometric Depreciation Envelope]
+    RawInput["Raw User Input"] --> BrandGuard["1. Brand Displacement Ceiling Check"]
+    BrandGuard --> TreeEnsemble["2. CatBoost + XGBoost Stacking Ensemble"]
+    TreeEnsemble --> EconBounds["3. Multi-Stage Econometric Depreciation Envelope"]
     
-    subgraph Econometric Envelope
+    subgraph EconEnv ["Econometric Envelope"]
         AgeDecay["Age Decay: 1 / (1 + 0.085 * age)^1.35"]
         KmDecay["Odometer Decay: 1 / (1 + 0.000016 * kms)"]
         OwnerPenalty["Owner Penalty: 1 - (owner_rank - 1) * 0.08"]
         ScrapFloor["Salvage Scrap Asymptote Floor: ~₹8,000 - ₹25,000"]
     end
 
-    EconBounds --> AgeDecay & KmDecay & OwnerPenalty & ScrapFloor
-    AgeDecay & KmDecay & OwnerPenalty & ScrapFloor --> CertifiedOutput[Certified Fair Market Valuation]
+    EconBounds --> AgeDecay
+    EconBounds --> KmDecay
+    EconBounds --> OwnerPenalty
+    EconBounds --> ScrapFloor
+    AgeDecay --> CertifiedOutput["Certified Fair Market Valuation"]
+    KmDecay --> CertifiedOutput
+    OwnerPenalty --> CertifiedOutput
+    ScrapFloor --> CertifiedOutput
 ```
 
 ### Empirical Formulation:
@@ -226,32 +232,33 @@ Both engines were trained, cross-validated, and benchmarked on verified, authent
 
 ```mermaid
 graph LR
-    subgraph InputData [Raw Listings Ingestion]
-        BikesCSV[Used_Bikes.csv (32k+ Listings)]
-        CarsCSV[Used_Cars.csv (8k+ Listings)]
+    subgraph InputData ["Raw Listings Ingestion"]
+        BikesCSV["Used_Bikes.csv (32k+ Listings)"]
+        CarsCSV["Used_Cars.csv (8k+ Listings)"]
     end
 
-    subgraph FeaturePipeline [Preprocessing & Feature Engineering]
-        Clean[Outlier Removal & Bounds Extraction]
-        FeatEng[Derived Features: cc, bhp, kms_per_year, log_kms]
+    subgraph FeaturePipeline ["Preprocessing & Feature Engineering"]
+        Clean["Outlier Removal & Bounds Extraction"]
+        FeatEng["Derived Features: cc, bhp, kms_per_year, log_kms"]
     end
 
-    subgraph ModelEnsemble [Dual-Engine Stacking Architecture]
-        CatBoost[CatBoost Regressor: Native Categorical Encodings]
-        XGBoost[XGBoost Regressor: Deep Decision Trees]
-        Stacker[Weighted Ensemble: 0.6 CatBoost + 0.4 XGBoost]
+    subgraph ModelEnsemble ["Dual-Engine Stacking Architecture"]
+        CatBoost["CatBoost Regressor: Native Categorical Encodings"]
+        XGBoost["XGBoost Regressor: Deep Decision Trees"]
+        Stacker["Weighted Ensemble: 0.6 CatBoost + 0.4 XGBoost"]
     end
 
-    subgraph InferenceOutput [Intelligent Output Gateway]
-        Price[Fair Market Resale Price]
-        Interval[80% Confidence Interval Band]
-        Forecast[5-Year Depreciation Horizon]
-        Waterfall[Value Drivers Marginal Attribution]
+    subgraph InferenceOutput ["Intelligent Output Gateway"]
+        Price["Fair Market Resale Price"]
+        Interval["80% Confidence Interval Band"]
+        Forecast["5-Year Depreciation Horizon"]
+        Waterfall["Value Drivers Marginal Attribution"]
     end
 
     InputData --> FeaturePipeline
     FeaturePipeline --> ModelEnsemble
-    CatBoost & XGBoost --> Stacker
+    CatBoost --> Stacker
+    XGBoost --> Stacker
     Stacker --> InferenceOutput
 ```
 
@@ -261,15 +268,15 @@ graph LR
 
 ```mermaid
 graph TD
-    subgraph ClientLayer [Frontend: React 19 + Tailwind + Lucide]
-        ModeToggle[Navigation: Valuation • Compare • Simulator • Fleet Batch]
-        PresetsGrid[1-Click Market Presets]
-        Sliders[Dual-Tone Electric Sliders & Dynamic Fills]
-        Stage[Interactive Animated Vehicle Stage & Synth Audio]
-        CertModal[Official PDF Valuation Certificate]
+    subgraph ClientLayer ["Frontend: React 19 + Tailwind + Lucide"]
+        ModeToggle["Navigation: Valuation • Compare • Simulator • Fleet Batch"]
+        PresetsGrid["1-Click Market Presets"]
+        Sliders["Dual-Tone Electric Sliders & Dynamic Fills"]
+        Stage["Interactive Animated Vehicle Stage & Synth Audio"]
+        CertModal["Official PDF Valuation Certificate"]
     end
 
-    subgraph APILayer [FastAPI Enterprise Gateway: Port 8000]
+    subgraph APILayer ["FastAPI Enterprise Gateway: Port 8000"]
         DemoEP["GET/POST /api/v1/demo/estimate (Public Demo API)"]
         DemoSimEP["GET /api/v1/demo/simulate (Public Simulator API)"]
         WidgetEP["GET /api/v1/demo/widget.js (Drop-in JS Widget)"]
@@ -280,13 +287,13 @@ graph TD
         HealthEP["GET /health (Model Readiness Probe)"]
     end
 
-    subgraph MLLayer [Machine Learning Runtime]
+    subgraph MLLayer ["Machine Learning Runtime"]
         BikeModel["models/best_model.joblib (97.4% R²)"]
         CarModel["models/car_model.joblib (97.3% R²)"]
         Metadata["models/*.metadata.json (OOD Clamping)"]
     end
 
-    ClientLayer -- JSON over HTTP --> APILayer
+    ClientLayer -->|JSON over HTTP| APILayer
     APILayer --> MLLayer
     MLLayer --> ClientLayer
 ```

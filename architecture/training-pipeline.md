@@ -6,24 +6,24 @@ The training pipelines transform raw CSV datasets into deterministic, deployment
 
 ```mermaid
 graph LR
-    subgraph Motorcycle Pipeline
-        BikeRaw[data/Used_Bikes.csv - 32k listings] --> BikeLoader[Data Loader]
-        BikeLoader --> BikePreproc[Cleaning & Filters]
-        BikePreproc --> BikeEngineer[Feature Engineering]
-        BikeEngineer --> BikeCV[Cross-Validation Suite]
-        BikeCV --> BikeArt[Serialization]
-        BikeArt --> BikeJoblib[models/best_model.joblib]
-        BikeArt --> BikeMeta[models/best_model.metadata.json]
+    subgraph MotoPipe ["Motorcycle Pipeline"]
+        BikeRaw["data/Used_Bikes.csv (32k listings)"] --> BikeLoader["Data Loader"]
+        BikeLoader --> BikePreproc["Cleaning & Filters"]
+        BikePreproc --> BikeEngineer["Feature Engineering"]
+        BikeEngineer --> BikeCV["Cross-Validation Suite"]
+        BikeCV --> BikeArt["Serialization"]
+        BikeArt --> BikeJoblib["models/best_model.joblib"]
+        BikeArt --> BikeMeta["models/best_model.metadata.json"]
     end
 
-    subgraph Passenger Car Pipeline
-        CarRaw[data/Used_Cars.csv - 8k listings] --> CarLoader[Data Loader]
-        CarLoader --> CarPreproc[Cleaning & Filters]
-        CarPreproc --> CarEngineer[Feature Engineering]
-        CarEngineer --> CarCV[Cross-Validation Suite]
-        CarCV --> CarArt[Serialization]
-        CarArt --> CarJoblib[models/car_model.joblib]
-        CarArt --> CarMeta[models/car_model.metadata.json]
+    subgraph CarPipe ["Passenger Car Pipeline"]
+        CarRaw["data/Used_Cars.csv (8k listings)"] --> CarLoader["Data Loader"]
+        CarLoader --> CarPreproc["Cleaning & Filters"]
+        CarPreproc --> CarEngineer["Feature Engineering"]
+        CarEngineer --> CarCV["Cross-Validation Suite"]
+        CarCV --> CarArt["Serialization"]
+        CarArt --> CarJoblib["models/car_model.joblib"]
+        CarArt --> CarMeta["models/car_model.metadata.json"]
     end
 ```
 

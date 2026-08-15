@@ -16,7 +16,7 @@ The platform consists of five primary layers:
 graph TD
     Client["React 19 UI & Studio"] -->|HTTP / JSON| API["FastAPI Gateway"]
     
-    subgraph Backend Service
+    subgraph BackendService ["Backend Service"]
         API --> Contracts["Pydantic Contracts & Validation"]
         Contracts --> Router{"Vehicle Router"}
         Router -->|Bike Request| BikePipeline["Bike Preprocessing & Clamping"]
@@ -31,9 +31,9 @@ graph TD
         API --> Telemetry["Async SQLite Telemetry & Drift Monitor"]
     end
     
-    subgraph Offline Training Pipelines
-        BikeData["data/Used_Bikes.csv - 32k listings"] --> TrainBikes["train_catboost_shap.py"]
-        CarData["data/Used_Cars.csv - 8k listings"] --> TrainCars["train_cars.py"]
+    subgraph OfflinePipelines ["Offline Training Pipelines"]
+        BikeData["data/Used_Bikes.csv (32k listings)"] --> TrainBikes["train_catboost_shap.py"]
+        CarData["data/Used_Cars.csv (8k listings)"] --> TrainCars["train_cars.py"]
         TrainBikes --> BikeArt
         TrainCars --> CarArt
     end
