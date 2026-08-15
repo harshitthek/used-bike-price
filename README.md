@@ -17,11 +17,12 @@
 
 <p align="center">
   <b>A full-stack, enterprise-grade automotive resale intelligence and asset valuation platform.</b><br>
+  Designed & Built by <b><a href="https://github.com/harshitthek">Harshit</a></b> (<b><a href="https://github.com/harshitthek">@harshitthek</a></b>).<br>
   Trained on over <b>40,000+ authentic Indian vehicle transactions</b> across 23+ manufacturers.<br>
   Delivers high-precision fair market appraisals, statistical confidence bands, 5-year depreciation forecasts, explainable value drivers, historical price trends, MLOps drift monitoring, instant PDF inspection certificates, and public portfolio demo endpoints.
 </p>
 
-[🚀 Live Vercel App](https://moto-value-ai.vercel.app/) • [Swagger API Docs](http://127.0.0.1:8000/docs) • [Portfolio Integration Guide](PORTFOLIO_INTEGRATION.md) • [Architecture Guide](APPROACH.md) • [Report Issue](https://github.com/harshitthek/used-bike-price/issues)
+[🚀 Live Vercel App](https://moto-value-ai.vercel.app/) • [Author Profile](https://github.com/harshitthek) • [Swagger API Docs](http://127.0.0.1:8000/docs) • [Portfolio Integration Guide](PORTFOLIO_INTEGRATION.md) • [Architecture Guide](APPROACH.md) • [Report Issue](https://github.com/harshitthek/used-bike-price/issues)
 
 ---
 
@@ -626,8 +627,20 @@ used-bike-price/
 
 ---
 
+## 👨‍💻 Author & Maintainer
+
+Designed, engineered, and maintained by **Harshit** ([@harshitthek](https://github.com/harshitthek)).
+
+* **GitHub**: [@harshitthek](https://github.com/harshitthek)
+* **Project Repository**: [harshitthek/used-bike-price](https://github.com/harshitthek/used-bike-price)
+* **Live Web Studio**: [AutoValuate AI on Vercel](https://moto-value-ai.vercel.app/)
+
+Feel free to connect, submit issues, or contribute pull requests!
+
+---
+
 ## 📄 License & Attribution
 
-This project is open-source under the **[MIT License](LICENSE)**.
+This project is open-source software licensed under the **[MIT License](LICENSE)**.
 
-Developed with ❤️ for automotive fintech intelligence.
+Copyright © 2026 **Harshit** ([@harshitthek](https://github.com/harshitthek)). All rights reserved.

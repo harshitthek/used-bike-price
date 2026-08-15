@@ -287,10 +287,12 @@ function App() {
           <span>•</span>
           <span className="text-slate-400">Dual-Engine Stacking Intelligence (97.4% R²)</span>
         </div>
-        <div className="flex items-center gap-4 text-slate-400 text-[11px]">
-          <span>40,000+ Verified Transactions</span>
+        <div className="flex items-center gap-3 text-slate-400 text-[11px]">
+          <span>Built by <a href="https://github.com/harshitthek" target="_blank" rel="noreferrer" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">Harshit (@harshitthek)</a></span>
           <span>•</span>
-          <span className="font-mono text-indigo-400">Production Ready</span>
+          <span>40,000+ Records</span>
+          <span>•</span>
+          <span className="font-mono text-emerald-400">v2.4.0 Live</span>
         </div>
       </footer>
 

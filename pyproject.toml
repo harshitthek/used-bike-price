@@ -1,3 +1,13 @@
+[project]
+name = "autovaluate-ai"
+version = "2.4.0"
+description = "Enterprise vehicle valuation and lifecycle simulation suite"
+authors = [
+    { name = "Harshit", email = "164781433+harshitthek@users.noreply.github.com" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+
 [tool.ruff]
 line-length = 88
 
