@@ -165,9 +165,23 @@ export function AnimatedVehicleStage({
     setBodyStyle(vehicleType === 'bike' ? 'cruiser' : 'suv')
   }, [vehicleType])
 
+  const safeTimeline = (timeline && timeline.length > 0 ? timeline : [
+    { year: 0, retention_rate: 100, estimated_price: 100000 },
+    { year: 1, retention_rate: 85, estimated_price: 85000 },
+    { year: 2, retention_rate: 74, estimated_price: 74000 },
+    { year: 3, retention_rate: 64, estimated_price: 64000 },
+    { year: 4, retention_rate: 55, estimated_price: 55000 },
+    { year: 5, retention_rate: 48, estimated_price: 48000 }
+  ]).map((pt, idx) => ({
+    ...pt,
+    year: pt.year ?? pt.calendar_year ?? pt.year_offset ?? idx,
+    retention_rate: pt.retention_rate ?? pt.retention_pct ?? 100,
+    estimated_price: pt.estimated_price ?? pt.resale_value ?? 0,
+  }))
+
   const brandColor = getBrandColor(brand, vehicleType)
-  const maxYear = timeline.length > 0 ? timeline[timeline.length - 1].year : 5
-  const currentPoint = timeline.find((p) => p.year === activeYear) || timeline[0] || {}
+  const maxYear = safeTimeline.length > 0 ? safeTimeline[safeTimeline.length - 1].year : 5
+  const currentPoint = safeTimeline.find((p) => p.year === activeYear) || safeTimeline[0] || {}
   const isOptimal = activeYear === optimalYear
   const yearInsight = getYearInsight(activeYear, optimalYear)
 
@@ -516,12 +530,12 @@ export function AnimatedVehicleStage({
 
         {/* Milestone Roadside Signposts (With Retention Value Tags) */}
         <div className="absolute top-2 inset-x-0 flex justify-between px-6 pointer-events-none z-10">
-          {timeline.map((pt) => {
+          {safeTimeline.map((pt, idx) => {
             const isTarget = pt.year === activeYear
             const isOpt = pt.year === optimalYear
             return (
               <div 
-                key={pt.year}
+                key={pt.year ?? idx}
                 className={`flex flex-col items-center transition-all duration-300 ${
                   isTarget ? 'scale-110 opacity-100' : 'opacity-40'
                 }`}
@@ -562,7 +576,7 @@ export function AnimatedVehicleStage({
         </AnimatePresence>
 
         {/* 🚗 VEHICLE GROUND-ALIGNED STAGE */}
-        <div className="relative w-full h-20 overflow-hidden">
+        <div className="relative w-full h-28 sm:h-32 overflow-hidden flex items-end">
           <motion.div
             className="absolute bottom-0 z-20"
             animate={{
@@ -880,16 +894,16 @@ export function AnimatedVehicleStage({
             <span className="text-slate-400 font-semibold text-xs shrink-0 mr-1 flex items-center gap-1">
               <Calendar size={12} className="text-indigo-400" /> Milestone:
             </span>
-            {timeline.map((pt) => {
+            {safeTimeline.map((pt, idx) => {
               const isOpt = pt.year === optimalYear
               const isSel = activeYear === pt.year
               return (
                 <button
-                  key={pt.year}
+                  key={pt.year ?? idx}
                   type="button"
                   onClick={() => {
                     setIsPlaying(false)
-                    onYearSelect(pt.year)
+                    if (onYearSelect) onYearSelect(pt.year)
                   }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 ${
                     isSel

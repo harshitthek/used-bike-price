@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { NumberTicker } from '../components/ui/NumberTicker'
 import { GlassCard } from '../components/ui/GlassCard'
+import { AnimatedVehicleStage } from '../components/ui/AnimatedVehicleStage'
 import { apiPost } from '../hooks/useApi'
 
 // ── POPULAR PRESETS ──────────────────────────────────────────────────
@@ -551,6 +552,16 @@ Verification: 92.0% Empirical Machine Learning Confidence`
         <div className="lg:col-span-7 space-y-6">
           {result ? (
             <div className="space-y-6 animate-in slide-in-from-bottom duration-300">
+              {/* Interactive Vehicle Simulation & Headlamp Stage */}
+              <AnimatedVehicleStage
+                vehicleType={vehicleType}
+                brand={currentFormData.brand}
+                timeline={result.depreciation_forecast || []}
+                activeYear={0}
+                optimalYear={3}
+                annualKms={Math.round(currentFormData.kms_driven / Math.max(1, currentFormData.age))}
+              />
+
               {/* Primary Appraisal Card */}
               <GlassCard className="p-6 border-indigo-500/40 relative overflow-hidden bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-950">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3 mb-4">
