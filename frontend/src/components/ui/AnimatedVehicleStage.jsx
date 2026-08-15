@@ -95,16 +95,22 @@ class EngineAudio {
         this.gainNode.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.04)
       } catch (e) {}
     }
+    const o1 = this.osc1
+    const o2 = this.osc2
+    this.osc1 = null
+    this.osc2 = null
     setTimeout(() => {
-      if (this.osc1) {
+      if (o1) {
         try {
-          this.osc1.stop()
-          this.osc2.stop()
-          this.osc1.disconnect()
-          this.osc2.disconnect()
+          o1.stop()
+          o1.disconnect()
         } catch (e) {}
-        this.osc1 = null
-        this.osc2 = null
+      }
+      if (o2) {
+        try {
+          o2.stop()
+          o2.disconnect()
+        } catch (e) {}
       }
     }, 50)
   }

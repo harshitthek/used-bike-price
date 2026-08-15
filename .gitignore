@@ -8,8 +8,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.ruff_cache/
 .ipynb_checkpoints/
 catboost_info/
+*.log
+action_logs.txt
+.coverage
+htmlcov/
 
 
 # Node/Frontend
@@ -47,6 +52,13 @@ outputs/*.json
 .secret
 secrets.json
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+
 # Keep non-secret templates versioned
 !.env.example
 !frontend/.env.example
+

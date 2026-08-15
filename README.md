@@ -10,16 +10,18 @@
 [![CatBoost](https://img.shields.io/badge/CatBoost-1.2.10-FFCC00?style=for-the-badge&logo=yandex&logoColor=black)](https://catboost.ai)
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-EB5424?style=for-the-badge&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![Test Suite](https://img.shields.io/badge/Pytest-26%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Test Suite](https://img.shields.io/badge/Pytest-34%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Vitest](https://img.shields.io/badge/Vitest-13%20Passing-729B1B?style=for-the-badge&logo=vitest&logoColor=white)](frontend/)
+[![Deployment](https://img.shields.io/badge/Vercel-Live%20Demo-black?style=for-the-badge&logo=vercel&logoColor=white)](https://moto-value-ai.vercel.app/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 <p align="center">
   <b>A full-stack, enterprise-grade automotive resale intelligence and asset valuation platform.</b><br>
   Trained on over <b>40,000+ authentic Indian vehicle transactions</b> across 23+ manufacturers.<br>
-  Delivers high-precision fair market appraisals, statistical confidence bands, 5-year depreciation forecasts, explainable value drivers, instant PDF inspection certificates, and public portfolio demo endpoints.
+  Delivers high-precision fair market appraisals, statistical confidence bands, 5-year depreciation forecasts, explainable value drivers, historical price trends, MLOps drift monitoring, instant PDF inspection certificates, and public portfolio demo endpoints.
 </p>
 
-[Explore Web App](http://localhost:5174) • [Swagger API Docs](http://127.0.0.1:8000/docs) • [Portfolio Integration Guide](PORTFOLIO_INTEGRATION.md) • [Architecture Guide](APPROACH.md) • [Report Issue](https://github.com/harshitthek/used-bike-price/issues)
+[🚀 Live Vercel App](https://moto-value-ai.vercel.app/) • [Swagger API Docs](http://127.0.0.1:8000/docs) • [Portfolio Integration Guide](PORTFOLIO_INTEGRATION.md) • [Architecture Guide](APPROACH.md) • [Report Issue](https://github.com/harshitthek/used-bike-price/issues)
 
 ---
 
@@ -70,8 +72,8 @@
   </tr>
   <tr>
     <td width="50%">
-      <h3>📈 5-Year Forward Resale Forecast</h3>
-      Simulates progressive vehicle aging ($t \in [0..5]$ yrs) and odometer usage ($+6\text{k km/yr}$ bikes, $+12\text{k km/yr}$ cars) with custom interactive bezier curve visualizations.
+      <h3>📦 Fleet Batch Valuation</h3>
+      Bulk enterprise inference endpoint (<code>POST /predict/batch</code>) evaluating multiple vehicles simultaneously with summary totals and high-confidence metrics.
     </td>
     <td width="50%">
       <h3>🐳 Production Docker & Compose</h3>
@@ -260,16 +262,19 @@ graph LR
 ```mermaid
 graph TD
     subgraph ClientLayer [Frontend: React 19 + Tailwind + Lucide]
-        ModeToggle[Navigation: Valuation • Compare • Fleet Batch]
+        ModeToggle[Navigation: Valuation • Compare • Simulator • Fleet Batch]
         PresetsGrid[1-Click Market Presets]
         Sliders[Dual-Tone Electric Sliders & Dynamic Fills]
+        Stage[Interactive Animated Vehicle Stage & Synth Audio]
         CertModal[Official PDF Valuation Certificate]
     end
 
     subgraph APILayer [FastAPI Enterprise Gateway: Port 8000]
         DemoEP["GET/POST /api/v1/demo/estimate (Public Demo API)"]
+        DemoSimEP["GET /api/v1/demo/simulate (Public Simulator API)"]
         WidgetEP["GET /api/v1/demo/widget.js (Drop-in JS Widget)"]
         PredictEP["POST /predict (Enterprise Valuation & Drivers)"]
+        SimulateEP["POST /simulate/lifecycle (TCO & Lifecycle Engine)"]
         BatchEP["POST /predict/batch (Fleet Portfolio Appraisal)"]
         ContractEP["GET /contract (Schema & Bounds)"]
         HealthEP["GET /health (Model Readiness Probe)"]
@@ -357,7 +362,30 @@ curl -X POST "http://127.0.0.1:8000/predict" \
 
 ---
 
-### 3. Fleet & Dealership Batch Appraisal (`POST /predict/batch`)
+### 3. Ownership Lifecycle & TCO Simulation (`POST /simulate/lifecycle`)
+Simulates multi-year total cost of ownership (TCO), fuel/charging expenditure, annual maintenance, insurance (IDV), effective cost per kilometer (₹/km), and the AI-calculated optimal liquidation window.
+
+```bash
+curl -X POST "http://127.0.0.1:8000/simulate/lifecycle" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: dev_12345" \
+  -d '{
+    "vehicle_type": "bike",
+    "brand": "Royal Enfield",
+    "power": 350,
+    "purchase_price": 220000,
+    "current_age": 0,
+    "current_kms": 0,
+    "annual_kms": 10000,
+    "horizon_years": 5,
+    "custom_fuel_price": 102,
+    "custom_mileage_kml": 35
+  }'
+```
+
+---
+
+### 4. Fleet & Dealership Batch Appraisal (`POST /predict/batch`)
 Appraises up to 50 vehicles simultaneously with aggregated portfolio analytics.
 
 ```bash
@@ -385,42 +413,36 @@ curl -X POST "http://127.0.0.1:8000/predict/batch" \
 git clone https://github.com/harshitthek/used-bike-price.git
 cd used-bike-price
 
-# Virtual environment setup
+# Setup Python virtual environment
 python -m venv .venv
-
 # Windows:
 .venv\Scripts\activate
 # Linux/macOS:
 source .venv/bin/activate
 
-# Install backend dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Start Backend Inference API
+### 2. Launch Development Servers
 ```bash
-python -m uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
-```
-* Interactive Swagger Docs: **`http://127.0.0.1:8000/docs`**
-* Health Endpoint: **`http://127.0.0.1:8000/health`**
+# Terminal 1: FastAPI Backend
+uvicorn src.api:app --reload --port 8000
 
-### 3. Start Frontend Web Application
-In a separate terminal window:
-```bash
+# Terminal 2: React Frontend
 cd frontend
 npm install
 npm run dev
 ```
-* Open in browser: **`http://localhost:5174`**
 
 ---
 
 ## 🐳 Docker Deployment
 
-Run the entire application in an isolated, multi-stage production container with a single command:
+Run the entire full-stack application inside a single production-hardened container:
 
 ```bash
-docker compose up --build
+# Build & Run via Docker Compose
+docker-compose up --build
 ```
 * Access the complete full-stack platform at **`http://localhost:8000`**.
 
@@ -431,16 +453,19 @@ docker compose up --build
 Our continuous integration pipeline enforces rigorous quality gates across the full stack:
 
 ```bash
-# 1. Run all 26 automated Pytest unit and integration tests
+# 1. Run all 34 automated Python Pytest unit and integration tests
 pytest
 
-# 2. Verify Black PEP-8 code formatting
+# 2. Run all 13 React Vitest frontend component and hook tests
+cd frontend && npm test
+
+# 3. Verify Black PEP-8 code formatting
 black --check src tests
 
-# 3. Run Ruff code linter
+# 4. Run Ruff code linter
 ruff check src tests
 
-# 4. Validate Frontend Production Bundle
+# 5. Validate Frontend Production Bundle
 cd frontend && npm run build
 ```
 
@@ -455,11 +480,15 @@ used-bike-price/
 ├── data/                          # Authentic Datasets
 │   ├── Used_Bikes.csv             # 32,000+ Indian motorcycle listings
 │   └── Used_Cars.csv              # 8,000+ Indian passenger car listings
-├── frontend/                      # React 19 SPA Application
+├── frontend/                      # React 19 Modular SPA (Vitest + Tailwind v4)
 │   ├── src/
-│   │   ├── components/ui/         # GlassCard, NumberTicker, Sliders
-│   │   ├── App.jsx                # Valuation, Compare, Fleet, Certificate & PDF UI
-│   │   └── index.css              # Luxury automotive dark obsidian styles & print CSS
+│   │   ├── components/ui/         # GlassCard, NumberTicker, AnimatedVehicleStage
+│   │   ├── hooks/                 # useApi, useValuationHistory
+│   │   ├── views/                 # SingleValuation, Compare, Simulator, FleetBatch, Trends, AdminDashboard
+│   │   ├── __tests__/             # Vitest Component & Hook Test Suite (13 passing)
+│   │   ├── App.jsx                # Clean Root Router & Navigation
+│   │   └── index.css              # Obsidian Dark Theme, Print CSS, A11y
+│   ├── vitest.config.js           # Vitest jsdom test runner config
 │   └── package.json
 ├── models/                        # Serialized Machine Learning Artifacts
 │   ├── best_model.joblib          # Bike Stacking Model (97.4% R²)
@@ -467,20 +496,26 @@ used-bike-price/
 │   ├── car_model.joblib           # Car Stacking Model (97.3% R²)
 │   └── car_model.metadata.json    # Car OOD bounds & feature ranges
 ├── src/                           # Python Source Package
-│   ├── api.py                     # FastAPI REST routes, demo endpoints, & bounds logic
+│   ├── api.py                     # FastAPI REST routes, MLOps endpoints, & bounds logic
+│   ├── config.py                  # Centralized Pydantic-Settings configuration
 │   ├── contracts.py               # Shared validation constants & brand ceilings
+│   ├── database.py                # Async SQLite database engine (Telemetry & Certificates)
+│   ├── trends.py                  # Historical price percentiles & brand analysis engine
+│   ├── monitoring.py              # Population Stability Index (PSI) drift detector
+│   ├── certificates.py            # SHA-256 certificate hashing & persistent sharing
+│   ├── retrain.py                 # CLI model retraining & artifact backup utility
 │   ├── models.py                  # StackingEnsembleModel class definition
-│   ├── train_catboost_shap.py     # CatBoost + XGBoost training pipeline
 │   ├── feature_engineering.py     # Derived automotive features
 │   └── preprocessing.py           # Outlier filtering and data cleaning
-├── tests/                         # Pytest Suite (26 passed tests)
-│   └── test_api.py                # Valuation, demo, and boundary test cases
+├── tests/                         # Pytest Suite (34 passed tests)
+│   ├── test_api.py                # Valuation, demo, trends, drift, & certificate tests
+│   └── test_frontend_contract.py  # Frontend environment & schema alignment
 ├── Dockerfile                     # Multi-stage production container build
 ├── docker-compose.yml             # Single-command container orchestration
 ├── PORTFOLIO_INTEGRATION.md       # Step-by-step developer integration guide
 ├── pyproject.toml                 # Ruff & Pytest configuration
 ├── requirements.txt               # Locked production dependencies
-├── APPROACH.md                    # Detailed ML engineering log (Phases 1 - 18)
+├── APPROACH.md                    # Detailed ML engineering log
 └── README.md                      # Project documentation
 ```
 

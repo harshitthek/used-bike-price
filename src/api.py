@@ -17,7 +17,6 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Res
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -30,36 +29,35 @@ except ImportError:
     HAS_CORRELATION_ID = False
 
 
+import secrets
+
 from src.contracts import (
-    AGE_MAX,
-    AGE_MIN,
     ANNUAL_KM_BIKE,
     ANNUAL_KM_CAR,
-    BATCH_PREDICT_MAX_ITEMS,
     BIKE_BRAND_POWER_LIMITS,
     BIKE_BRANDS,
-    CAR_AGE_MAX,
-    CAR_AGE_MIN,
-    CAR_BHP_MAX,
-    CAR_BHP_MIN,
     CAR_BRAND_ENGINE_LIMITS,
     CAR_BRANDS,
-    CAR_ENGINE_MAX,
-    CAR_ENGINE_MIN,
     CAR_FUEL_TYPES,
-    CAR_KMS_MAX,
-    CAR_KMS_MIN,
     CAR_PREDICTION_FEATURES,
     CAR_TRANSMISSION_TYPES,
     DEFAULT_FUEL_PRICES,
-    KMS_MAX,
-    KMS_MIN,
-    OWNER_RANK_MAX,
-    OWNER_RANK_MIN,
     OWNER_RANK_TO_LABEL,
-    POWER_MAX,
-    POWER_MIN,
     PREDICTION_FEATURES,
+    BatchPredictionRequest,
+    BatchPredictionResponse,
+    BatchPredictionSummary,
+    BikeFeatures,
+    CarFeatures,
+    DepreciationForecastItem,
+    PredictionResponse,
+    PriceRange,
+    SimulationRequest,
+    SimulationResponse,
+    SimulationScenario,
+    UniversalVehicleInput,
+    WaterfallItem,
+    YearlySimulationPoint,
 )
 from src.feature_engineering import DERIVED_NUMERIC_FEATURES
 from src.logging_config import setup_logging
@@ -71,11 +69,17 @@ except ImportError:
 
 
 load_dotenv()
+from src.certificates import create_certificate, get_certificate
+from src.config import settings
+from src.database import init_db, log_prediction
+from src.monitoring import get_drift_report, load_reference_distributions
+from src.trends import get_trends
+
 logger = logging.getLogger(__name__)
 
-# Basic Setup & Variables
-API_KEY = os.getenv("API_KEY", "dev_12345")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+# Settings
+API_KEY = settings.api_key
+FRONTEND_URL = settings.frontend_url
 
 
 def resolve_allowed_origins() -> list[str]:
@@ -199,8 +203,10 @@ def get_model(vehicle_type: str = "bike") -> Tuple[Any, Optional[dict]]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Preload models at startup
+    # Preload models and reference distributions at startup
     _load_artifacts()
+    load_reference_distributions()
+    await init_db()
     yield
 
 
@@ -222,245 +228,16 @@ app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_hand
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS if settings.strict_cors else ["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-def verify_api_key(x_api_key: str = Header("None")):
-    if x_api_key != API_KEY:
+def verify_api_key(x_api_key: Optional[str] = Header(None)):
+    if not x_api_key or not secrets.compare_digest(x_api_key, API_KEY):
         raise HTTPException(status_code=401, detail="Invalid or Missing API Key")
-
-
-# ── REQUEST & RESPONSE SCHEMAS ─────────────────────────────────────
-
-
-class BikeFeatures(BaseModel):
-    vehicle_type: Literal["bike"] = "bike"
-    brand: str = Field(
-        ...,
-        title="Brand",
-        min_length=2,
-        max_length=50,
-        json_schema_extra={"example": "Royal Enfield"},
-    )
-    power: float = Field(
-        ...,
-        title="Engine Power (cc)",
-        ge=POWER_MIN,
-        le=POWER_MAX,
-        json_schema_extra={"example": 350},
-    )
-    kms_driven: float = Field(
-        ...,
-        title="Kilometers Driven",
-        ge=KMS_MIN,
-        le=KMS_MAX,
-        json_schema_extra={"example": 15000},
-    )
-    age: float = Field(
-        ...,
-        title="Age (Years)",
-        ge=AGE_MIN,
-        le=AGE_MAX,
-        json_schema_extra={"example": 3},
-    )
-    owner_rank: int = Field(
-        ...,
-        title="Owner Rank (1-5)",
-        ge=OWNER_RANK_MIN,
-        le=OWNER_RANK_MAX,
-        json_schema_extra={"example": 1},
-    )
-
-
-class CarFeatures(BaseModel):
-    vehicle_type: Literal["car"] = "car"
-    brand: str = Field(
-        ...,
-        title="Brand",
-        min_length=2,
-        max_length=50,
-        json_schema_extra={"example": "Maruti"},
-    )
-    fuel: str = Field(
-        default="Petrol",
-        title="Fuel Type",
-        json_schema_extra={"example": "Petrol"},
-    )
-    transmission: str = Field(
-        default="Manual",
-        title="Transmission",
-        json_schema_extra={"example": "Manual"},
-    )
-    engine_cc: float = Field(
-        ...,
-        title="Engine Displacement (cc)",
-        ge=CAR_ENGINE_MIN,
-        le=CAR_ENGINE_MAX,
-        json_schema_extra={"example": 1197},
-    )
-    max_power_bhp: Optional[float] = Field(
-        default=None,
-        title="Max Power (bhp)",
-        ge=CAR_BHP_MIN,
-        le=CAR_BHP_MAX,
-        json_schema_extra={"example": 82.0},
-    )
-    kms_driven: float = Field(
-        ...,
-        title="Kilometers Driven",
-        ge=CAR_KMS_MIN,
-        le=CAR_KMS_MAX,
-        json_schema_extra={"example": 45000},
-    )
-    age: float = Field(
-        ...,
-        title="Age (Years)",
-        ge=CAR_AGE_MIN,
-        le=CAR_AGE_MAX,
-        json_schema_extra={"example": 5},
-    )
-    owner_rank: int = Field(
-        ...,
-        title="Owner Rank (1-5)",
-        ge=OWNER_RANK_MIN,
-        le=OWNER_RANK_MAX,
-        json_schema_extra={"example": 1},
-    )
-
-
-class UniversalVehicleInput(BaseModel):
-    vehicle_type: Literal["bike", "car"] = "bike"
-    brand: str = Field(..., min_length=2, max_length=50)
-    power: Optional[float] = None
-    engine_cc: Optional[float] = None
-    max_power_bhp: Optional[float] = None
-    fuel: Optional[str] = "Petrol"
-    transmission: Optional[str] = "Manual"
-    kms_driven: float = Field(..., ge=0, le=999999)
-    age: float = Field(..., ge=0, le=50)
-    owner_rank: int = Field(..., ge=1, le=5)
-
-
-class PriceRange(BaseModel):
-    min: float
-    max: float
-    confidence_interval: float = 0.80
-
-
-class WaterfallItem(BaseModel):
-    factor: str
-    impact: float
-    direction: Literal["positive", "negative", "neutral"]
-    description: str
-
-
-class DepreciationForecastItem(BaseModel):
-    year_offset: int
-    calendar_year: int
-    age: float
-    kms_driven: float
-    estimated_price: float
-    retention_pct: float
-
-
-class PredictionResponse(BaseModel):
-    vehicle_type: str = "bike"
-    estimated_price: float
-    currency: str = "INR"
-    price_range: PriceRange
-    prediction_quality: dict = Field(default_factory=dict)
-    warnings: list[str] = Field(default_factory=list)
-    adjustments: list[dict] = Field(default_factory=list)
-    waterfall_breakdown: list[WaterfallItem] = Field(default_factory=list)
-    depreciation_forecast: list[DepreciationForecastItem] = Field(default_factory=list)
-
-
-class BatchPredictionRequest(BaseModel):
-    vehicles: List[UniversalVehicleInput] = Field(
-        ..., max_length=BATCH_PREDICT_MAX_ITEMS
-    )
-
-
-class BatchPredictionSummary(BaseModel):
-    total_fleet_value: float
-    average_vehicle_price: float
-    vehicle_count: int
-    high_confidence_count: int
-
-
-class BatchPredictionResponse(BaseModel):
-    summary: BatchPredictionSummary
-    predictions: List[PredictionResponse]
-
-
-# ── LIFECYCLE SIMULATION SCHEMAS ───────────────────────────────────
-
-
-class SimulationRequest(BaseModel):
-    vehicle_type: Literal["bike", "car"] = "bike"
-    brand: str = Field(..., json_schema_extra={"example": "Royal Enfield"})
-    power: Optional[float] = Field(None, json_schema_extra={"example": 350.0})
-    engine_cc: Optional[float] = Field(None, json_schema_extra={"example": 1197.0})
-    max_power_bhp: Optional[float] = Field(None, json_schema_extra={"example": 82.0})
-    fuel: str = Field("Petrol", json_schema_extra={"example": "Petrol"})
-    transmission: str = Field("Manual", json_schema_extra={"example": "Manual"})
-    purchase_price: Optional[float] = Field(
-        None, description="Purchase price or original showroom price (INR)"
-    )
-    current_age: float = Field(0.0, ge=0.0, le=25.0)
-    current_kms: float = Field(0.0, ge=0.0, le=500000.0)
-    owner_rank: int = Field(1, ge=1, le=5)
-    horizon_years: int = Field(5, ge=1, le=10)
-    annual_kms: float = Field(10000.0, ge=1000.0, le=60000.0)
-    custom_fuel_price: Optional[float] = Field(None, ge=1.0, le=300.0)
-    custom_mileage_kml: Optional[float] = Field(None, ge=1.0, le=100.0)
-
-
-class YearlySimulationPoint(BaseModel):
-    year: int
-    calendar_year: int
-    total_kms: float
-    resale_value: float
-    retention_rate: float
-    depreciation_loss: float
-    annual_fuel_cost: float
-    annual_maintenance: float
-    annual_insurance: float
-    annual_operating_cost: float
-    cumulative_operating_cost: float
-    cumulative_tco: float
-    net_cost_per_km: float
-    monthly_effective_cost: float
-
-
-class SimulationScenario(BaseModel):
-    name: str
-    annual_kms: float
-    sell_year: int
-    final_resale: float
-    total_spent: float
-    net_cost_per_km: float
-    monthly_burn: float
-    summary: str
-
-
-class SimulationResponse(BaseModel):
-    success: bool = True
-    vehicle: dict
-    initial_price: float
-    horizon_years: int
-    annual_kms: float
-    fuel_type: str
-    mileage_kml: float
-    fuel_price_per_unit: float
-    timeline: List[YearlySimulationPoint]
-    summary: dict
-    optimal_sell_window: dict
-    scenarios: List[SimulationScenario]
 
 
 # ── INFERENCE INPUT PREPARATION ─────────────────────────────────────
@@ -1032,7 +809,7 @@ def contract_check(
     dependencies=[Depends(verify_api_key)],
 )
 @limiter.limit("30/minute")
-def predict_price(request: Request, payload: UniversalVehicleInput):
+async def predict_price(request: Request, payload: UniversalVehicleInput):
     start_time = time.perf_counter()
     v_type = payload.vehicle_type
 
@@ -1100,6 +877,18 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
             },
         )
 
+        # Log prediction to telemetry database
+        try:
+            await log_prediction(
+                vehicle_type=v_type,
+                brand=payload.brand,
+                input_data=payload.model_dump(),
+                estimated_price=round(price, 0),
+                confidence=quality["level"],
+            )
+        except Exception as log_err:
+            logger.debug(f"Telemetry log skipped: {log_err}")
+
         return PredictionResponse(
             vehicle_type=v_type,
             estimated_price=round(price, 0),
@@ -1134,14 +923,14 @@ def predict_price(request: Request, payload: UniversalVehicleInput):
     dependencies=[Depends(verify_api_key)],
 )
 @limiter.limit("20/minute")
-def predict_batch(request: Request, batch_payload: BatchPredictionRequest):
+async def predict_batch(request: Request, batch_payload: BatchPredictionRequest):
     """Bulk valuation endpoint for fleet management and dealership inventories."""
     results: list[PredictionResponse] = []
     total_val = 0.0
     high_conf_count = 0
 
     for item in batch_payload.vehicles:
-        res = predict_price(request, item)
+        res = await predict_price(request, item)
         results.append(res)
         total_val += res.estimated_price
         if res.prediction_quality.get("level") == "high":
@@ -1274,13 +1063,13 @@ def demo_estimate_get(
         input_df, quality, warnings, adjustments = prepare_car_inference(
             payload, metadata
         )
-        default_rmse = 129437.0
+        default_rmse = 141335.0
         floor_price = 25000.0
     else:
         input_df, quality, warnings, adjustments = prepare_bike_inference(
             payload, metadata
         )
-        default_rmse = 14081.0
+        default_rmse = 14934.0
         floor_price = 1000.0
 
     prediction = float(model.predict(input_df)[0])
@@ -1331,13 +1120,13 @@ def demo_estimate_post(request: Request, payload: UniversalVehicleInput):
         input_df, quality, warnings, adjustments = prepare_car_inference(
             payload, metadata
         )
-        default_rmse = 129437.0
+        default_rmse = 141335.0
         floor_price = 25000.0
     else:
         input_df, quality, warnings, adjustments = prepare_bike_inference(
             payload, metadata
         )
-        default_rmse = 14081.0
+        default_rmse = 14934.0
         floor_price = 1000.0
 
     prediction = float(model.predict(input_df)[0])
@@ -1782,7 +1571,60 @@ def demo_simulate_get(
     return calculate_lifecycle_simulation(req)
 
 
+# ── NEW API ENDPOINTS: TRENDS, CERTIFICATES & MLOPS ───────────────
+
+
+@app.get("/api/v1/trends")
+@limiter.limit("60/minute")
+def trends_endpoint(
+    request: Request,
+    vehicle_type: Literal["bike", "car"] = Query("bike"),
+    brand: Optional[str] = Query(None),
+    metric: Literal["median", "mean"] = Query("median"),
+):
+    """Historical transaction price trends, statistical percentiles, and market volume by brand & year."""
+    return get_trends(vehicle_type=vehicle_type, brand=brand, metric=metric)
+
+
+@app.post("/certificates/generate")
+@limiter.limit("30/minute")
+async def generate_certificate(request: Request, payload: dict):
+    """Generate a shareable hash ID for a valuation certificate."""
+    vtype = payload.get("vehicle_type", "bike")
+    brand = payload.get("brand", "Vehicle")
+    input_data = payload.get("input", {})
+    result_data = payload.get("result", {})
+    return await create_certificate(vtype, brand, input_data, result_data)
+
+
+@app.get("/certificates/{hash_id}")
+@limiter.limit("60/minute")
+async def retrieve_certificate(request: Request, hash_id: str):
+    """Retrieve shared valuation certificate data by its unique hash ID."""
+    cert = await get_certificate(hash_id)
+    if not cert:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    return cert
+
+
+@app.get("/admin/drift-report")
+@limiter.limit("30/minute")
+async def drift_report_endpoint(request: Request):
+    """Telemetry report: Population Stability Index (PSI) drift tracking across live requests."""
+    return await get_drift_report()
+
+
+@app.post("/admin/reload-models")
+@limiter.limit("10/minute")
+def reload_models_endpoint(request: Request):
+    """Zero-downtime hot-reload of pre-trained model artifacts from disk."""
+    with _model_lock:
+        _load_artifacts()
+    return {"status": "success", "message": "Model artifacts reloaded from disk."}
+
+
 # Mount compiled frontend SPA if dist/ exists (production mode / Docker)
+
 
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 if FRONTEND_DIST.exists():

@@ -497,3 +497,61 @@ def test_demo_simulate_get(monkeypatch):
     payload = response.json()
     assert payload["success"] is True
     assert len(payload["timeline"]) == 6
+
+
+def test_trends_endpoint_bike():
+    response = client.get("/api/v1/trends?vehicle_type=bike")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["vehicle_type"] == "bike"
+    assert "available_brands" in payload
+    assert "data" in payload
+    assert isinstance(payload["data"], list)
+
+
+def test_trends_endpoint_car():
+    response = client.get("/api/v1/trends?vehicle_type=car&brand=Maruti")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["vehicle_type"] == "car"
+    assert payload["brand_filter"] == "Maruti"
+    assert isinstance(payload["data"], list)
+
+
+def test_certificate_generate_and_retrieve():
+    # 1. Generate certificate
+    cert_payload = {
+        "vehicle_type": "bike",
+        "brand": "Royal Enfield",
+        "input": {"power": 350, "kms_driven": 15000, "age": 3, "owner_rank": 1},
+        "result": {"estimated_price": 120000.0, "confidence": "high"},
+    }
+    gen_res = client.post("/certificates/generate", json=cert_payload)
+    assert gen_res.status_code == 200
+    gen_data = gen_res.json()
+    assert "hash_id" in gen_data
+    hash_id = gen_data["hash_id"]
+
+    # 2. Retrieve certificate
+    get_res = client.get(f"/certificates/{hash_id}")
+    assert get_res.status_code == 200
+    get_data = get_res.json()
+    assert get_data["hash_id"] == hash_id
+    assert get_data["brand"] == "Royal Enfield"
+    assert get_data["result"]["estimated_price"] == 120000.0
+
+
+def test_drift_report_endpoint():
+    response = client.get("/admin/drift-report")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "total_predictions" in payload
+    assert "predictions_24h" in payload
+    assert "recommendation" in payload
+
+
+def test_reload_models_endpoint():
+    response = client.post("/admin/reload-models")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "success"

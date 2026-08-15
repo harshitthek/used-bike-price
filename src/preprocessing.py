@@ -59,14 +59,14 @@ def preprocess(df: pd.DataFrame, *, verbose: bool = True) -> pd.DataFrame:
     for col in NUMERIC_FEATURES:
         if col in df.columns and df[col].isnull().any():
             median = df[col].median()
-            df[col].fillna(median, inplace=True)
+            df[col] = df[col].fillna(median)
             if verbose:
                 print(f"  filled {col} NaNs with median={median:.1f}")
 
     # Categorical: fill with 'Unknown'
     for col in CATEGORICAL_FEATURES:
         if col in df.columns and df[col].isnull().any():
-            df[col].fillna("Unknown", inplace=True)
+            df[col] = df[col].fillna("Unknown")
             if verbose:
                 print(f"  filled {col} NaNs with 'Unknown'")
 

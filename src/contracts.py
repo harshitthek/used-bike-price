@@ -1,12 +1,15 @@
-"""Shared inference/training contract constants for Bikes and Cars.
+"""Shared inference/training contract constants and schemas for Bikes and Cars.
 
-These constants keep field names, accepted ranges, and owner mappings
-consistent across preprocessing, API validation, and CLI inference.
+These constants and Pydantic models keep field names, accepted ranges, schemas,
+and owner mappings consistent across preprocessing, API validation, CLI inference,
+and tests.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
+
+from pydantic import BaseModel, Field
 
 # Supported vehicle types
 VEHICLE_TYPES: Tuple[str, ...] = ("bike", "car")
@@ -106,8 +109,9 @@ CAR_BRAND_ENGINE_LIMITS: Dict[str, Tuple[float, float]] = {
     "Mercedes-Benz": (1595.0, 3498.0),
     "Jaguar": (1999.0, 2993.0),
     "Volvo": (1969.0, 2400.0),
+    "Chevrolet": (995.0, 1991.0),
+    "Fiat": (1172.0, 1598.0),
 }
-
 
 CAR_FUEL_TYPES: List[str] = ["Petrol", "Diesel", "CNG", "Electric"]
 CAR_TRANSMISSION_TYPES: List[str] = ["Manual", "Automatic"]
@@ -195,3 +199,232 @@ DEFAULT_MILEAGE_KML: Dict[str, float] = {
     "car_cng": 24.0,
     "car_electric": 1.0,
 }
+
+
+# ── REQUEST & RESPONSE SCHEMAS ─────────────────────────────────────
+
+
+class BikeFeatures(BaseModel):
+    vehicle_type: Literal["bike"] = "bike"
+    brand: str = Field(
+        ...,
+        title="Brand",
+        min_length=2,
+        max_length=50,
+        json_schema_extra={"example": "Royal Enfield"},
+    )
+    power: float = Field(
+        ...,
+        title="Engine Power (cc)",
+        ge=POWER_MIN,
+        le=POWER_MAX,
+        json_schema_extra={"example": 350},
+    )
+    kms_driven: float = Field(
+        ...,
+        title="Kilometers Driven",
+        ge=KMS_MIN,
+        le=KMS_MAX,
+        json_schema_extra={"example": 15000},
+    )
+    age: float = Field(
+        ...,
+        title="Age (Years)",
+        ge=AGE_MIN,
+        le=AGE_MAX,
+        json_schema_extra={"example": 3},
+    )
+    owner_rank: int = Field(
+        ...,
+        title="Owner Rank (1-5)",
+        ge=OWNER_RANK_MIN,
+        le=OWNER_RANK_MAX,
+        json_schema_extra={"example": 1},
+    )
+
+
+class CarFeatures(BaseModel):
+    vehicle_type: Literal["car"] = "car"
+    brand: str = Field(
+        ...,
+        title="Brand",
+        min_length=2,
+        max_length=50,
+        json_schema_extra={"example": "Maruti"},
+    )
+    fuel: str = Field(
+        default="Petrol",
+        title="Fuel Type",
+        json_schema_extra={"example": "Petrol"},
+    )
+    transmission: str = Field(
+        default="Manual",
+        title="Transmission",
+        json_schema_extra={"example": "Manual"},
+    )
+    engine_cc: float = Field(
+        ...,
+        title="Engine Displacement (cc)",
+        ge=CAR_ENGINE_MIN,
+        le=CAR_ENGINE_MAX,
+        json_schema_extra={"example": 1197},
+    )
+    max_power_bhp: Optional[float] = Field(
+        default=None,
+        title="Max Power (bhp)",
+        ge=CAR_BHP_MIN,
+        le=CAR_BHP_MAX,
+        json_schema_extra={"example": 82.0},
+    )
+    kms_driven: float = Field(
+        ...,
+        title="Kilometers Driven",
+        ge=CAR_KMS_MIN,
+        le=CAR_KMS_MAX,
+        json_schema_extra={"example": 45000},
+    )
+    age: float = Field(
+        ...,
+        title="Age (Years)",
+        ge=CAR_AGE_MIN,
+        le=CAR_AGE_MAX,
+        json_schema_extra={"example": 5},
+    )
+    owner_rank: int = Field(
+        ...,
+        title="Owner Rank (1-5)",
+        ge=OWNER_RANK_MIN,
+        le=OWNER_RANK_MAX,
+        json_schema_extra={"example": 1},
+    )
+
+
+class UniversalVehicleInput(BaseModel):
+    vehicle_type: Literal["bike", "car"] = "bike"
+    brand: str = Field(..., min_length=2, max_length=50)
+    power: Optional[float] = None
+    engine_cc: Optional[float] = None
+    max_power_bhp: Optional[float] = None
+    fuel: Optional[str] = "Petrol"
+    transmission: Optional[str] = "Manual"
+    kms_driven: float = Field(..., ge=0, le=999999)
+    age: float = Field(..., ge=0, le=50)
+    owner_rank: int = Field(..., ge=1, le=5)
+
+
+class PriceRange(BaseModel):
+    min: float
+    max: float
+    confidence_interval: float = 0.80
+
+
+class WaterfallItem(BaseModel):
+    factor: str
+    impact: float
+    direction: Literal["positive", "negative", "neutral"]
+    description: str
+
+
+class DepreciationForecastItem(BaseModel):
+    year_offset: int
+    calendar_year: int
+    age: float
+    kms_driven: float
+    estimated_price: float
+    retention_pct: float
+
+
+class PredictionResponse(BaseModel):
+    vehicle_type: str = "bike"
+    estimated_price: float
+    currency: str = "INR"
+    price_range: PriceRange
+    prediction_quality: dict = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+    adjustments: list[dict] = Field(default_factory=list)
+    waterfall_breakdown: list[WaterfallItem] = Field(default_factory=list)
+    depreciation_forecast: list[DepreciationForecastItem] = Field(default_factory=list)
+
+
+class BatchPredictionRequest(BaseModel):
+    vehicles: List[UniversalVehicleInput] = Field(
+        ..., max_length=BATCH_PREDICT_MAX_ITEMS
+    )
+
+
+class BatchPredictionSummary(BaseModel):
+    total_fleet_value: float
+    average_vehicle_price: float
+    vehicle_count: int
+    high_confidence_count: int
+
+
+class BatchPredictionResponse(BaseModel):
+    summary: BatchPredictionSummary
+    predictions: List[PredictionResponse]
+
+
+# ── LIFECYCLE SIMULATION SCHEMAS ───────────────────────────────────
+
+
+class SimulationRequest(BaseModel):
+    vehicle_type: Literal["bike", "car"] = "bike"
+    brand: str = Field(..., json_schema_extra={"example": "Royal Enfield"})
+    power: Optional[float] = Field(None, json_schema_extra={"example": 350.0})
+    engine_cc: Optional[float] = Field(None, json_schema_extra={"example": 1197.0})
+    max_power_bhp: Optional[float] = Field(None, json_schema_extra={"example": 82.0})
+    fuel: str = Field("Petrol", json_schema_extra={"example": "Petrol"})
+    transmission: str = Field("Manual", json_schema_extra={"example": "Manual"})
+    purchase_price: Optional[float] = Field(
+        None, description="Purchase price or original showroom price (INR)"
+    )
+    current_age: float = Field(0.0, ge=0.0, le=25.0)
+    current_kms: float = Field(0.0, ge=0.0, le=500000.0)
+    owner_rank: int = Field(1, ge=1, le=5)
+    horizon_years: int = Field(5, ge=1, le=10)
+    annual_kms: float = Field(10000.0, ge=1000.0, le=60000.0)
+    custom_fuel_price: Optional[float] = Field(None, ge=1.0, le=300.0)
+    custom_mileage_kml: Optional[float] = Field(None, ge=1.0, le=100.0)
+
+
+class YearlySimulationPoint(BaseModel):
+    year: int
+    calendar_year: int
+    total_kms: float
+    resale_value: float
+    retention_rate: float
+    depreciation_loss: float
+    annual_fuel_cost: float
+    annual_maintenance: float
+    annual_insurance: float
+    annual_operating_cost: float
+    cumulative_operating_cost: float
+    cumulative_tco: float
+    net_cost_per_km: float
+    monthly_effective_cost: float
+
+
+class SimulationScenario(BaseModel):
+    name: str
+    annual_kms: float
+    sell_year: int
+    final_resale: float
+    total_spent: float
+    net_cost_per_km: float
+    monthly_burn: float
+    summary: str
+
+
+class SimulationResponse(BaseModel):
+    success: bool = True
+    vehicle: dict
+    initial_price: float
+    horizon_years: int
+    annual_kms: float
+    fuel_type: str
+    mileage_kml: float
+    fuel_price_per_unit: float
+    timeline: List[YearlySimulationPoint]
+    summary: dict
+    optimal_sell_window: dict
+    scenarios: List[SimulationScenario]

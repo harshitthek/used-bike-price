@@ -17,27 +17,34 @@ export function NumberTicker({
   const isInView = useInView(ref, { once: true, margin: "0px" });
 
   useEffect(() => {
-    isInView &&
-      setTimeout(() => {
-        motionValue.set(direction === "down" ? 0 : value);
-      }, delay * 1000);
+    if (!isInView) return;
+    const timer = setTimeout(() => {
+      motionValue.set(direction === "down" ? 0 : value);
+    }, delay * 1000);
+    return () => clearTimeout(timer);
   }, [motionValue, isInView, delay, value, direction]);
 
-  useEffect(() =>
-    springValue.on("change", (latest) => {
+  useEffect(() => {
+    const unsubscribe = springValue.on("change", (latest) => {
       if (ref.current) {
         ref.current.textContent = Intl.NumberFormat("en-IN", {
           minimumFractionDigits: decimalPlaces,
           maximumFractionDigits: decimalPlaces,
         }).format(Number(latest.toFixed(decimalPlaces)));
       }
-    })
-  , [springValue, decimalPlaces]);
+    });
+    return () => unsubscribe();
+  }, [springValue, decimalPlaces]);
 
   return (
     <span
       className={`inline-block tabular-nums tracking-wider text-black dark:text-white ${className}`}
       ref={ref}
-    />
+    >
+      {Intl.NumberFormat("en-IN", {
+        minimumFractionDigits: decimalPlaces,
+        maximumFractionDigits: decimalPlaces,
+      }).format(Number((direction === "down" ? value : 0).toFixed(decimalPlaces)))}
+    </span>
   );
 }

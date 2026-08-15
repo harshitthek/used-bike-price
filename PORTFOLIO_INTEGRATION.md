@@ -254,3 +254,45 @@ Simulates progressive multi-year depreciation, cumulative operating expenses (fu
 * `annual_kms`: Estimated annual distance driven (e.g. `10000`)
 * `horizon_years`: Simulation duration (e.g. `5` to `10`)
 
+**Sample Response Payload:**
+```json
+{
+  "success": true,
+  "vehicle": {
+    "type": "bike",
+    "brand": "Royal Enfield",
+    "power": 350.0
+  },
+  "initial_price": 220000.0,
+  "horizon_years": 5,
+  "annual_kms": 10000.0,
+  "fuel_type": "Petrol",
+  "mileage_kml": 45.0,
+  "fuel_price_per_unit": 102.0,
+  "timeline": [
+    {
+      "year": 1,
+      "calendar_year": 2027,
+      "total_kms": 10000.0,
+      "resale_value": 187000.0,
+      "retention_rate": 85.0,
+      "depreciation_loss": 33000.0,
+      "annual_fuel_cost": 22667.0,
+      "annual_maintenance": 4500.0,
+      "annual_insurance": 5610.0,
+      "annual_operating_cost": 32777.0,
+      "cumulative_operating_cost": 32777.0,
+      "cumulative_tco": 65777.0,
+      "net_cost_per_km": 6.58,
+      "monthly_effective_cost": 5481.0
+    }
+  ],
+  "optimal_sell_window": {
+    "recommended_sell_year": 3,
+    "reasoning": "Year 3 minimizes cumulative effective monthly burn before higher maintenance cycles begin.",
+    "effective_monthly_cost": 4820.0,
+    "total_loss_at_exit": 173500.0
+  }
+}
+```
+

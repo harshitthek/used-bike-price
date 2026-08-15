@@ -48,12 +48,12 @@ class StackingEnsembleModel:
         # CatBoost prediction
         cat_preds = self.cat_model.predict(X_df)
 
-        # XGB / LGB encoded predictions
+        # XGB / LGB encoded predictions (drop_first=False prevents dropping sole category on single-row inputs)
         X_encoded = pd.get_dummies(
-            X_df, columns=self.categorical_features, drop_first=True
+            X_df, columns=self.categorical_features, drop_first=False
         )
 
-        # Align columns
+        # Align columns to XGBoost expected schema
         if hasattr(self.xgb_model, "feature_names_in_"):
             for c in self.xgb_model.feature_names_in_:
                 if c not in X_encoded.columns:
@@ -63,8 +63,15 @@ class StackingEnsembleModel:
         else:
             xgb_preds = cat_preds
 
-        w_cat, w_xgb, w_lgb = self.weights
-        return (w_cat * np.array(cat_preds)) + ((1.0 - w_cat) * np.array(xgb_preds))
+        w_cat = float(self.weights[0]) if len(self.weights) > 0 else 0.6
+        w_xgb = float(self.weights[1]) if len(self.weights) > 1 else (1.0 - w_cat)
+        total_w = w_cat + w_xgb
+        if total_w > 0:
+            w_cat, w_xgb = w_cat / total_w, w_xgb / total_w
+        else:
+            w_cat, w_xgb = 0.6, 0.4
+
+        return (w_cat * np.array(cat_preds)) + (w_xgb * np.array(xgb_preds))
 
 
 def build_preprocessor(
@@ -164,6 +171,5 @@ def tune_best_model(
     best_name: str,
     best_pipe: Pipeline,
 ) -> Pipeline:
-    # Baseline return fitted model or refined parameters
     best_pipe.fit(X_train, y_train)
     return best_pipe

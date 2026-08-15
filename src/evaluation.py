@@ -177,7 +177,9 @@ def plot_feature_importance(
     """Feature importance for tree-based models."""
     sns.set_theme(style="whitegrid", font_scale=1.0)
 
-    model = pipe.named_steps["model"]
+    model = pipe.named_steps.get("model") or pipe.named_steps.get("regressor")
+    if model is None:
+        return ""
 
     importances = None
     if hasattr(model, "feature_importances_"):

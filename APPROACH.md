@@ -352,11 +352,11 @@ To address the limitation of single-point resale predictions, we introduced stat
 ## 22. Phase 17 — Dual-Engine Platform Upgrade (Motorcycles & Cars)
 To expand from a two-wheeler estimator into a comprehensive automotive valuation platform (**AutoValuate AI**):
 
-- Ingested authentic Indian car listings ([`data/Used_Cars.csv`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/data/Used_Cars.csv)) covering 6,708 real transactions across 23 brands.
-- Built [`src/train_cars.py`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/src/train_cars.py) and trained an XGBoost regression model reaching **$R^2 = 0.9200$ (92% accuracy)** and $\text{MAE} = ₹74,976$.
-- Upgraded [`src/api.py`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/src/api.py) and [`src/contracts.py`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/src/contracts.py) with dynamic vehicle routing (`vehicle_type: "bike" | "car"`).
-- Upgraded [`frontend/src/App.jsx`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/frontend/src/App.jsx) with a Vehicle Mode Switcher (🏍️ Bikes | 🚗 Cars), 1-click popular presets, and car-specific fuel/transmission controls.
-- Consolidated ADRs and added [`ADR 007: Dual-Engine Vehicle Architecture`](file:///c:/Users/user/Desktop/dwsktop/harshit/projects/used-bike-price/architecture/adr/007-dual-engine-bike-and-car-architecture.md).
+- Ingested authentic Indian car listings ([`data/Used_Cars.csv`](data/Used_Cars.csv)) covering 6,708 real transactions across 23 brands.
+- Built [`src/train_cars.py`](src/train_cars.py) and trained an XGBoost regression model reaching **$R^2 = 0.9200$ (92% accuracy)** and $\text{MAE} = ₹74,976$.
+- Upgraded [`src/api.py`](src/api.py) and [`src/contracts.py`](src/contracts.py) with dynamic vehicle routing (`vehicle_type: "bike" | "car"`).
+- Upgraded [`frontend/src/App.jsx`](frontend/src/App.jsx) with a Vehicle Mode Switcher (🏍️ Bikes | 🚗 Cars), 1-click popular presets, and car-specific fuel/transmission controls.
+- Consolidated ADRs and added [`ADR 007: Dual-Engine Vehicle Architecture`](architecture/adr/007-dual-engine-bike-and-car-architecture.md).
 
 ## 23. Phase 18 — AutoValuate Pro Suite (Forecast, Comparison, Waterfall & Fleet Batch)
 We introduced advanced valuation intelligence and analytics across the full stack:
