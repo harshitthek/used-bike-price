@@ -1,8 +1,11 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 _bike_trends = None
 _car_trends = None
@@ -11,43 +14,75 @@ _car_trends = None
 def _load_trends():
     global _bike_trends, _car_trends
 
-    # Bikes
-    df_bikes = pd.read_csv("data/Used_Bikes.csv")
-    df_bikes = df_bikes.dropna(subset=["price", "brand", "age"])
-    df_bikes["age"] = df_bikes["age"].astype(int)
-    current_year = datetime.now().year
-    df_bikes["approx_year"] = current_year - df_bikes["age"]
-
-    _bike_trends = (
-        df_bikes.groupby(["brand", "approx_year"])
-        .agg(
-            mean_price=("price", "mean"),
-            median_price=("price", "median"),
-            p25_price=("price", lambda x: np.percentile(x, 25)),
-            p75_price=("price", lambda x: np.percentile(x, 75)),
-            sample_count=("price", "count"),
-        )
-        .reset_index()
+    # Default empty DataFrames in case files are absent
+    _bike_trends = pd.DataFrame(
+        columns=[
+            "brand",
+            "approx_year",
+            "mean_price",
+            "median_price",
+            "p25_price",
+            "p75_price",
+            "sample_count",
+        ]
+    )
+    _car_trends = pd.DataFrame(
+        columns=[
+            "brand",
+            "approx_year",
+            "mean_price",
+            "median_price",
+            "p25_price",
+            "p75_price",
+            "sample_count",
+        ]
     )
 
-    # Cars
-    df_cars = pd.read_csv("data/Used_Cars.csv")
-    df_cars = df_cars.dropna(subset=["selling_price", "name", "year"])
-    # Extract brand from name (first word)
-    df_cars["brand"] = df_cars["name"].str.split().str[0]
+    bike_csv = PROJECT_ROOT / "data" / "Used_Bikes.csv"
+    if bike_csv.exists():
+        try:
+            df_bikes = pd.read_csv(bike_csv)
+            df_bikes = df_bikes.dropna(subset=["price", "brand", "age"])
+            df_bikes["age"] = df_bikes["age"].astype(int)
+            current_year = datetime.now().year
+            df_bikes["approx_year"] = current_year - df_bikes["age"]
 
-    _car_trends = (
-        df_cars.groupby(["brand", "year"])
-        .agg(
-            mean_price=("selling_price", "mean"),
-            median_price=("selling_price", "median"),
-            p25_price=("selling_price", lambda x: np.percentile(x, 25)),
-            p75_price=("selling_price", lambda x: np.percentile(x, 75)),
-            sample_count=("selling_price", "count"),
-        )
-        .reset_index()
-    )
-    _car_trends = _car_trends.rename(columns={"year": "approx_year"})
+            _bike_trends = (
+                df_bikes.groupby(["brand", "approx_year"])
+                .agg(
+                    mean_price=("price", "mean"),
+                    median_price=("price", "median"),
+                    p25_price=("price", lambda x: np.percentile(x, 25)),
+                    p75_price=("price", lambda x: np.percentile(x, 75)),
+                    sample_count=("price", "count"),
+                )
+                .reset_index()
+            )
+        except Exception:
+            pass
+
+    car_csv = PROJECT_ROOT / "data" / "Used_Cars.csv"
+    if car_csv.exists():
+        try:
+            df_cars = pd.read_csv(car_csv)
+            df_cars = df_cars.dropna(subset=["selling_price", "name", "year"])
+            # Extract brand from name (first word)
+            df_cars["brand"] = df_cars["name"].str.split().str[0]
+
+            _car_trends = (
+                df_cars.groupby(["brand", "year"])
+                .agg(
+                    mean_price=("selling_price", "mean"),
+                    median_price=("selling_price", "median"),
+                    p25_price=("selling_price", lambda x: np.percentile(x, 25)),
+                    p75_price=("selling_price", lambda x: np.percentile(x, 75)),
+                    sample_count=("selling_price", "count"),
+                )
+                .reset_index()
+            )
+            _car_trends = _car_trends.rename(columns={"year": "approx_year"})
+        except Exception:
+            pass
 
 
 def get_trends(vehicle_type: str, brand: Optional[str] = None, metric: str = "median"):

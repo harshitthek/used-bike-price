@@ -1607,14 +1607,14 @@ async def retrieve_certificate(request: Request, hash_id: str):
     return cert
 
 
-@app.get("/admin/drift-report")
+@app.get("/admin/drift-report", dependencies=[Depends(verify_api_key)])
 @limiter.limit("30/minute")
 async def drift_report_endpoint(request: Request):
     """Telemetry report: Population Stability Index (PSI) drift tracking across live requests."""
     return await get_drift_report()
 
 
-@app.post("/admin/reload-models")
+@app.post("/admin/reload-models", dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 def reload_models_endpoint(request: Request):
     """Zero-downtime hot-reload of pre-trained model artifacts from disk."""

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
@@ -6,12 +7,18 @@ from sqlalchemy import func, select
 
 from src.database import PredictionLog, async_session
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def _psi(expected: np.ndarray, actual: np.ndarray, bins: int = 10) -> float:
     """Calculate Population Stability Index between two distributions."""
-    breakpoints = np.linspace(
-        min(expected.min(), actual.min()), max(expected.max(), actual.max()), bins + 1
-    )
+    if len(expected) == 0 or len(actual) == 0:
+        return 0.0
+    min_val = min(float(expected.min()), float(actual.min()))
+    max_val = max(float(expected.max()), float(actual.max()))
+    if min_val == max_val:
+        return 0.0
+    breakpoints = np.linspace(min_val, max_val, bins + 1)
     expected_counts = np.histogram(expected, bins=breakpoints)[0] + 1
     actual_counts = np.histogram(actual, bins=breakpoints)[0] + 1
 
@@ -32,28 +39,32 @@ def load_reference_distributions():
 
     global _reference_distributions
 
-    try:
-        df_bikes = pd.read_csv("data/Used_Bikes.csv").dropna()
-        _reference_distributions["bike"] = {
-            "power": df_bikes["power"].values.astype(float),
-            "kms_driven": df_bikes["kms_driven"].values.astype(float),
-            "age": df_bikes["age"].values.astype(float),
-            "price": df_bikes["price"].values.astype(float),
-        }
-    except Exception:
-        pass
+    bike_csv = PROJECT_ROOT / "data" / "Used_Bikes.csv"
+    if bike_csv.exists():
+        try:
+            df_bikes = pd.read_csv(bike_csv).dropna()
+            _reference_distributions["bike"] = {
+                "power": df_bikes["power"].values.astype(float),
+                "kms_driven": df_bikes["kms_driven"].values.astype(float),
+                "age": df_bikes["age"].values.astype(float),
+                "price": df_bikes["price"].values.astype(float),
+            }
+        except Exception:
+            pass
 
-    try:
-        df_cars = pd.read_csv("data/Used_Cars.csv").dropna(
-            subset=["selling_price", "km_driven", "year"]
-        )
-        _reference_distributions["car"] = {
-            "km_driven": df_cars["km_driven"].values.astype(float),
-            "year": df_cars["year"].values.astype(float),
-            "selling_price": df_cars["selling_price"].values.astype(float),
-        }
-    except Exception:
-        pass
+    car_csv = PROJECT_ROOT / "data" / "Used_Cars.csv"
+    if car_csv.exists():
+        try:
+            df_cars = pd.read_csv(car_csv).dropna(
+                subset=["selling_price", "km_driven", "year"]
+            )
+            _reference_distributions["car"] = {
+                "km_driven": df_cars["km_driven"].values.astype(float),
+                "year": df_cars["year"].values.astype(float),
+                "selling_price": df_cars["selling_price"].values.astype(float),
+            }
+        except Exception:
+            pass
 
 
 async def get_drift_report() -> dict:
@@ -104,14 +115,18 @@ async def get_drift_report() -> dict:
                 "sample_size": len(vtype_logs),
             }
 
+    recommendation = "insufficient_data"
+    if drift_features:
+        recommendation = (
+            "stable"
+            if all(v["status"] == "stable" for v in drift_features.values())
+            else "review"
+        )
+
     return {
         "total_predictions": total_count or 0,
         "predictions_24h": recent_count or 0,
         "drift_analysis": drift_features,
-        "recommendation": (
-            "stable"
-            if all(v["status"] == "stable" for v in drift_features.values())
-            else "review"
-        ),
+        "recommendation": recommendation,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }

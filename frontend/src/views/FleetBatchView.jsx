@@ -54,7 +54,13 @@ export function FleetBatchView({ contracts }) {
       ? { vehicle_type: 'bike', brand: 'Royal Enfield', power: 350, engine_cc: 350, kms_driven: 20000, age: 3, owner_rank: 1, fuel: 'Petrol', transmission: 'Manual' }
       : { vehicle_type: 'car', brand: 'Maruti', power: 1197, engine_cc: 1197, kms_driven: 40000, age: 4, owner_rank: 1, fuel: 'Petrol', transmission: 'Manual' }
     
+    setFleetResult(null)
     setFleetList(prev => [...prev, newVehicle])
+  }
+
+  const handleRemoveVehicle = (indexToRemove) => {
+    setFleetResult(null)
+    setFleetList(prev => prev.filter((_, i) => i !== indexToRemove))
   }
 
   const handleExportCsv = () => {
@@ -230,7 +236,7 @@ export function FleetBatchView({ contracts }) {
                     <button
                       type="button"
                       aria-label="Remove vehicle from fleet"
-                      onClick={() => setFleetList(prev => prev.filter((_, i) => i !== idx))}
+                      onClick={() => handleRemoveVehicle(idx)}
                       className="text-rose-400 hover:text-rose-300 cursor-pointer p-1 transition-colors"
                     >
                       <Trash2 size={14} />

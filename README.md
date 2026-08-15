@@ -11,7 +11,7 @@
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-EB5424?style=for-the-badge&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![Test Suite](https://img.shields.io/badge/Pytest-34%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
-[![Vitest](https://img.shields.io/badge/Vitest-13%20Passing-729B1B?style=for-the-badge&logo=vitest&logoColor=white)](frontend/)
+[![Vitest](https://img.shields.io/badge/Vitest-18%20Passing-729B1B?style=for-the-badge&logo=vitest&logoColor=white)](frontend/)
 [![Deployment](https://img.shields.io/badge/Vercel-Live%20Demo-black?style=for-the-badge&logo=vercel&logoColor=white)](https://moto-value-ai.vercel.app/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
@@ -485,7 +485,7 @@ used-bike-price/
 │   │   ├── components/ui/         # GlassCard, NumberTicker, AnimatedVehicleStage
 │   │   ├── hooks/                 # useApi, useValuationHistory
 │   │   ├── views/                 # SingleValuation, Compare, Simulator, FleetBatch, Trends, AdminDashboard
-│   │   ├── __tests__/             # Vitest Component & Hook Test Suite (13 passing)
+│   │   ├── __tests__/             # Vitest Component & Hook Test Suite (18 passing)
 │   │   ├── App.jsx                # Clean Root Router & Navigation
 │   │   └── index.css              # Obsidian Dark Theme, Print CSS, A11y
 │   ├── vitest.config.js           # Vitest jsdom test runner config

@@ -27,22 +27,32 @@ export function CertificateModal({
   const [copiedShare, setCopiedShare] = useState(false)
   const [shareError, setShareError] = useState(null)
 
-  // Lock background page scroll when modal is open
+  // Lock background page scroll and listen to Escape key when modal is open
   React.useEffect(() => {
     if (show) {
       const prevOverflow = document.body.style.overflow
       document.body.style.overflow = 'hidden'
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') onClose()
+      }
+      window.addEventListener('keydown', handleKeyDown)
+
       return () => {
         document.body.style.overflow = prevOverflow
+        window.removeEventListener('keydown', handleKeyDown)
       }
     }
-  }, [show])
+  }, [show, onClose])
+
+  const certId = React.useMemo(() => {
+    if (!result) return 'AV-2026-VALUED'
+    const ts = result.metadata?.timestamp ? new Date(result.metadata.timestamp).getTime() : 1786795000000
+    const hex = Math.abs(Math.round((result.estimated_price || 50000) * 1000 + (ts % 100000))).toString(36).substring(0, 6).toUpperCase()
+    return `AV-${new Date(ts).getFullYear()}-${hex}`
+  }, [result])
 
   if (!show || !result) return null
-
-  const certId = result.metadata?.timestamp 
-    ? `AV-${new Date(result.metadata.timestamp).getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-    : `AV-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
   const appraisalDate = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -55,7 +65,7 @@ export function CertificateModal({
     setDownloadingPdf(true)
 
     try {
-      generateCertificatePdf({ result, formData, vehicleType })
+      generateCertificatePdf({ result, formData, vehicleType, certId })
       setDownloadSuccess(true)
       setTimeout(() => setDownloadSuccess(false), 3000)
     } catch (err) {
@@ -90,6 +100,9 @@ export function CertificateModal({
 
   return (
     <div 
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="certificate-modal-title"
       className="fixed inset-0 z-50 overflow-y-auto overscroll-contain flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
@@ -104,7 +117,7 @@ export function CertificateModal({
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6 no-print">
           <div className="flex items-center gap-2">
             <ShieldCheck className="text-indigo-400" size={20} />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Official Valuation Certificate</span>
+            <span id="certificate-modal-title" className="text-xs font-bold uppercase tracking-wider text-slate-300">Official Valuation Certificate</span>
           </div>
           <button 
             aria-label="Close certificate modal"

@@ -237,6 +237,11 @@ export function SimulatorView({ contracts }) {
           <AnimatedVehicleStage
             vehicleType={simData.vehicle_type}
             brand={simData.brand}
+            timeline={simResult?.timeline || []}
+            activeYear={activeYear ?? 3}
+            onYearSelect={setActiveYear}
+            optimalYear={simResult?.optimal_sell_window?.recommended_sell_year || 3}
+            annualKms={simData.annual_kms}
             speedKmh={60}
           />
 

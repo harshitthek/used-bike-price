@@ -217,8 +217,12 @@ export function AdminDashboard() {
                     <td className="py-3 px-4 font-bold text-white uppercase">{key.replace('_', ' ')}</td>
                     <td className="py-3 px-4 font-bold text-cyan-300">{data.psi}</td>
                     <td className="py-3 px-4">{getStatusBadge(data.status)}</td>
-                    <td className="py-3 px-4 text-slate-300">₹{data.recent_mean?.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-4 text-slate-400">₹{data.training_mean?.toLocaleString('en-IN')}</td>
+                    <td className="py-3 px-4 text-slate-300">
+                      {key.includes('price') ? `₹${data.recent_mean?.toLocaleString('en-IN')}` : data.recent_mean?.toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-3 px-4 text-slate-400">
+                      {key.includes('price') ? `₹${data.training_mean?.toLocaleString('en-IN')}` : data.training_mean?.toLocaleString('en-IN')}
+                    </td>
                     <td className="py-3 px-4 text-right text-slate-400">{data.sample_size}</td>
                   </tr>
                 ))}

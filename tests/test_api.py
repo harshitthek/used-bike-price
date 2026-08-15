@@ -542,7 +542,7 @@ def test_certificate_generate_and_retrieve():
 
 
 def test_drift_report_endpoint():
-    response = client.get("/admin/drift-report")
+    response = client.get("/admin/drift-report", headers={"x-api-key": "dev_12345"})
     assert response.status_code == 200
     payload = response.json()
     assert "total_predictions" in payload
@@ -551,7 +551,7 @@ def test_drift_report_endpoint():
 
 
 def test_reload_models_endpoint():
-    response = client.post("/admin/reload-models")
+    response = client.post("/admin/reload-models", headers={"x-api-key": "dev_12345"})
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "success"

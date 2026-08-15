@@ -33,9 +33,9 @@ def retrain_bikes(data_path: str):
 
     # Import the training module
     try:
-        from src.train_catboost_shap import main as train_main
+        from src.train_catboost_shap import train_bike_model
 
-        train_main()
+        train_bike_model()
         print("  ✅ Motorcycle model retrained successfully!")
     except ImportError:
         print("  ❌ Error: src.train_catboost_shap module not found")
@@ -53,9 +53,9 @@ def retrain_cars(data_path: str):
     backup_existing_model("models/car_model.joblib")
 
     try:
-        from src.train_cars import main as train_main
+        from src.train_cars import train_car_model
 
-        train_main()
+        train_car_model()
         print("  ✅ Car model retrained successfully!")
     except ImportError:
         print("  ❌ Error: src.train_cars module not found")

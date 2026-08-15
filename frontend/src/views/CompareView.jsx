@@ -140,7 +140,7 @@ export function CompareView({ contracts }) {
             <div className="flex p-0.5 rounded-lg bg-white/5 border border-white/10 text-xs">
               <button
                 type="button"
-                onClick={() => setCompareA(prev => ({ ...prev, vehicle_type: 'bike' }))}
+                onClick={() => setCompareA(prev => ({ ...prev, vehicle_type: 'bike', brand: getBikeBrands()[0] || 'Royal Enfield', power: 350, engine_cc: 350 }))}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer ${
                   compareA.vehicle_type === 'bike' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
@@ -149,7 +149,7 @@ export function CompareView({ contracts }) {
               </button>
               <button
                 type="button"
-                onClick={() => setCompareA(prev => ({ ...prev, vehicle_type: 'car' }))}
+                onClick={() => setCompareA(prev => ({ ...prev, vehicle_type: 'car', brand: getCarBrands()[0] || 'Maruti', power: 1197, engine_cc: 1197, fuel: 'Petrol', transmission: 'Manual' }))}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer ${
                   compareA.vehicle_type === 'car' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
@@ -173,10 +173,39 @@ export function CompareView({ contracts }) {
               </select>
             </div>
 
+            {compareA.vehicle_type === 'car' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 text-[11px] block mb-1">Fuel Type</label>
+                  <select
+                    value={compareA.fuel || 'Petrol'}
+                    onChange={(e) => setCompareA(prev => ({ ...prev, fuel: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50"
+                  >
+                    <option value="Petrol" className="bg-slate-900 text-white">Petrol</option>
+                    <option value="Diesel" className="bg-slate-900 text-white">Diesel</option>
+                    <option value="CNG" className="bg-slate-900 text-white">CNG</option>
+                    <option value="LPG" className="bg-slate-900 text-white">LPG</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 text-[11px] block mb-1">Transmission</label>
+                  <select
+                    value={compareA.transmission || 'Manual'}
+                    onChange={(e) => setCompareA(prev => ({ ...prev, transmission: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50"
+                  >
+                    <option value="Manual" className="bg-slate-900 text-white">Manual</option>
+                    <option value="Automatic" className="bg-slate-900 text-white">Automatic</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-slate-400 text-[11px] block mb-1">
-                  {compareA.vehicle_type === 'bike' ? 'Engine (cc)' : 'Engine Displacement (cc)'}
+                  {compareA.vehicle_type === 'bike' ? 'Engine (cc)' : 'Displacement (cc)'}
                 </label>
                 <input
                   type="number"
@@ -241,7 +270,7 @@ export function CompareView({ contracts }) {
             <div className="flex p-0.5 rounded-lg bg-white/5 border border-white/10 text-xs">
               <button
                 type="button"
-                onClick={() => setCompareB(prev => ({ ...prev, vehicle_type: 'bike' }))}
+                onClick={() => setCompareB(prev => ({ ...prev, vehicle_type: 'bike', brand: getBikeBrands()[0] || 'Royal Enfield', power: 350, engine_cc: 350 }))}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer ${
                   compareB.vehicle_type === 'bike' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
@@ -250,7 +279,7 @@ export function CompareView({ contracts }) {
               </button>
               <button
                 type="button"
-                onClick={() => setCompareB(prev => ({ ...prev, vehicle_type: 'car' }))}
+                onClick={() => setCompareB(prev => ({ ...prev, vehicle_type: 'car', brand: getCarBrands()[0] || 'Maruti', power: 1197, engine_cc: 1197, fuel: 'Petrol', transmission: 'Manual' }))}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer ${
                   compareB.vehicle_type === 'car' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
@@ -274,10 +303,39 @@ export function CompareView({ contracts }) {
               </select>
             </div>
 
+            {compareB.vehicle_type === 'car' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 text-[11px] block mb-1">Fuel Type</label>
+                  <select
+                    value={compareB.fuel || 'Petrol'}
+                    onChange={(e) => setCompareB(prev => ({ ...prev, fuel: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50"
+                  >
+                    <option value="Petrol" className="bg-slate-900 text-white">Petrol</option>
+                    <option value="Diesel" className="bg-slate-900 text-white">Diesel</option>
+                    <option value="CNG" className="bg-slate-900 text-white">CNG</option>
+                    <option value="LPG" className="bg-slate-900 text-white">LPG</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 text-[11px] block mb-1">Transmission</label>
+                  <select
+                    value={compareB.transmission || 'Manual'}
+                    onChange={(e) => setCompareB(prev => ({ ...prev, transmission: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50"
+                  >
+                    <option value="Manual" className="bg-slate-900 text-white">Manual</option>
+                    <option value="Automatic" className="bg-slate-900 text-white">Automatic</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-slate-400 text-[11px] block mb-1">
-                  {compareB.vehicle_type === 'bike' ? 'Engine (cc)' : 'Engine Displacement (cc)'}
+                  {compareB.vehicle_type === 'bike' ? 'Engine (cc)' : 'Displacement (cc)'}
                 </label>
                 <input
                   type="number"

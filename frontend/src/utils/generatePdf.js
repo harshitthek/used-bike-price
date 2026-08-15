@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf'
  * Zero DOM dependencies, zero CSS parsing, zero thread freezing.
  * Generates and triggers instant PDF file download with multi-browser fallbacks.
  */
-export function generateCertificatePdf({ result, formData, vehicleType }) {
+export function generateCertificatePdf({ result, formData, vehicleType, certId: explicitCertId }) {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -14,9 +14,9 @@ export function generateCertificatePdf({ result, formData, vehicleType }) {
 
   const brand = formData?.brand || 'Vehicle'
   const vType = (vehicleType || 'bike').toUpperCase()
-  const certId = result?.metadata?.timestamp 
-    ? `AV-${new Date(result.metadata.timestamp).getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-    : `AV-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+  const certId = explicitCertId || (result?.metadata?.timestamp 
+    ? `AV-${new Date(result.metadata.timestamp).getFullYear()}-${Math.abs(Math.round(result.estimated_price * 1000)).toString(36).substring(0, 6).toUpperCase()}`
+    : 'AV-2026-VALUED')
 
   const appraisalDate = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -172,7 +172,7 @@ export function generateCertificatePdf({ result, formData, vehicleType }) {
   ]
 
   let startY = 185
-  forecast.slice(0, 5).forEach((row, i) => {
+  forecast.slice(0, 6).forEach((row, i) => {
     doc.setFont('courier', 'normal')
     doc.setFontSize(8.5)
     doc.setTextColor(226, 232, 240)
