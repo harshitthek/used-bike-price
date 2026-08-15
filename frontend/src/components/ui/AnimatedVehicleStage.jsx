@@ -57,18 +57,20 @@ class EngineAudio {
       this.gainNode = this.ctx.createGain()
       this.filterNode = this.ctx.createBiquadFilter()
 
+      // Rich harmonic waves for combustion engine rumble
       this.osc1.type = 'sawtooth'
       this.osc2.type = 'triangle'
 
-      const freq = Math.max(28, (rpm / 60) * 1.4)
-      this.osc1.frequency.setValueAtTime(freq, this.ctx.currentTime)
-      this.osc2.frequency.setValueAtTime(freq * 0.5, this.ctx.currentTime)
+      const fundamental = Math.max(32, (rpm / 60) * 1.5)
+      this.osc1.frequency.setValueAtTime(fundamental, this.ctx.currentTime)
+      this.osc2.frequency.setValueAtTime(fundamental * 0.5, this.ctx.currentTime)
 
       this.filterNode.type = 'lowpass'
-      this.filterNode.frequency.setValueAtTime(420, this.ctx.currentTime)
+      this.filterNode.frequency.setValueAtTime(650, this.ctx.currentTime)
 
+      // Punchy audible volume
       this.gainNode.gain.setValueAtTime(0.001, this.ctx.currentTime)
-      this.gainNode.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.1)
+      this.gainNode.gain.exponentialRampToValueAtTime(0.18, this.ctx.currentTime + 0.08)
 
       this.osc1.connect(this.filterNode)
       this.osc2.connect(this.filterNode)
@@ -83,9 +85,12 @@ class EngineAudio {
   setRPM(rpm) {
     if (!this.ctx || !this.osc1) return
     try {
-      const freq = Math.max(28, (rpm / 60) * 1.4)
-      this.osc1.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05)
-      this.osc2.frequency.setTargetAtTime(freq * 0.5, this.ctx.currentTime, 0.05)
+      const fundamental = Math.max(32, (rpm / 60) * 1.5)
+      this.osc1.frequency.setTargetAtTime(fundamental, this.ctx.currentTime, 0.04)
+      this.osc2.frequency.setTargetAtTime(fundamental * 0.5, this.ctx.currentTime, 0.04)
+      if (this.filterNode) {
+        this.filterNode.frequency.setTargetAtTime(Math.min(1400, 450 + (rpm / 7500) * 800), this.ctx.currentTime, 0.04)
+      }
     } catch (e) {}
   }
 
@@ -112,7 +117,7 @@ class EngineAudio {
           o2.disconnect()
         } catch (e) {}
       }
-    }, 50)
+    }, 60)
   }
 }
 
@@ -165,19 +170,51 @@ export function AnimatedVehicleStage({
     setBodyStyle(vehicleType === 'bike' ? 'cruiser' : 'suv')
   }, [vehicleType])
 
+  const isBike = vehicleType === 'bike'
+  const defaultBasePrice = isBike ? 145000 : 750000
+  const rawBase = (timeline && timeline.length > 0 && (timeline[0].estimated_price || timeline[0].resale_value)) || defaultBasePrice
+  const basePrice = rawBase > 0 ? rawBase : defaultBasePrice
+  const kmPerYear = annualKms && annualKms > 0 ? annualKms : (isBike ? 8000 : 12000)
+  const fuelRate = isBike ? 2.4 : 6.8
+  const maintRate = isBike ? 0.65 : 1.45
+  const insuranceAnnual = isBike ? 3500 : 12000
+
   const safeTimeline = (timeline && timeline.length > 0 ? timeline : [
-    { year: 0, retention_rate: 100, estimated_price: 100000 },
-    { year: 1, retention_rate: 85, estimated_price: 85000 },
-    { year: 2, retention_rate: 74, estimated_price: 74000 },
-    { year: 3, retention_rate: 64, estimated_price: 64000 },
-    { year: 4, retention_rate: 55, estimated_price: 55000 },
-    { year: 5, retention_rate: 48, estimated_price: 48000 }
-  ]).map((pt, idx) => ({
-    ...pt,
-    year: pt.year ?? pt.calendar_year ?? pt.year_offset ?? idx,
-    retention_rate: pt.retention_rate ?? pt.retention_pct ?? 100,
-    estimated_price: pt.estimated_price ?? pt.resale_value ?? 0,
-  }))
+    { year: 0, retention_rate: 100, estimated_price: basePrice },
+    { year: 1, retention_rate: 85, estimated_price: Math.round(basePrice * 0.85) },
+    { year: 2, retention_rate: 74, estimated_price: Math.round(basePrice * 0.74) },
+    { year: 3, retention_rate: 64, estimated_price: Math.round(basePrice * 0.64) },
+    { year: 4, retention_rate: 55, estimated_price: Math.round(basePrice * 0.55) },
+    { year: 5, retention_rate: 48, estimated_price: Math.round(basePrice * 0.48) }
+  ]).map((pt, idx) => {
+    const yr = pt.year ?? pt.calendar_year ?? pt.year_offset ?? idx
+    const retRate = pt.retention_rate ?? pt.retention_pct ?? Math.round(Math.pow(0.87, yr) * 100)
+    const rawResale = pt.estimated_price || pt.resale_value
+    const resale = rawResale && rawResale > 0 ? rawResale : Math.round(basePrice * (retRate / 100))
+    const depLoss = Math.max(0, basePrice - resale)
+    const fuelCost = pt.annual_fuel_cost ?? pt.cumulative_fuel ?? Math.round(kmPerYear * fuelRate * (1 + yr * 0.03) * Math.max(1, yr))
+    const maintCost = pt.annual_maintenance ?? pt.cumulative_maintenance ?? Math.round(kmPerYear * maintRate * (1 + yr * 0.12) * Math.max(1, yr))
+    const insCost = pt.cumulative_insurance ?? Math.round(insuranceAnnual * Math.max(1, yr) * 0.94)
+    const totalTco = pt.tco ?? pt.cumulative_tco ?? (depLoss + fuelCost + maintCost + insCost)
+    const totalKms = Math.max(1, yr * kmPerYear)
+    const costPerKm = (totalTco / totalKms).toFixed(1)
+    const monthly = Math.round(totalTco / Math.max(1, yr * 12))
+
+    return {
+      ...pt,
+      year: yr,
+      retention_rate: retRate,
+      resale_value: resale,
+      estimated_price: resale,
+      depreciation_loss: depLoss,
+      annual_fuel_cost: fuelCost,
+      annual_maintenance: maintCost,
+      cumulative_tco: totalTco,
+      net_cost_per_km: costPerKm,
+      monthly_cost: monthly,
+      calendar_year: pt.calendar_year || (new Date().getFullYear() + yr)
+    }
+  })
 
   const brandColor = getBrandColor(brand, vehicleType)
   const maxYear = safeTimeline.length > 0 ? safeTimeline[safeTimeline.length - 1].year : 5
@@ -447,16 +484,21 @@ export function AnimatedVehicleStage({
                 const next = !soundEnabled
                 setSoundEnabled(next)
                 engineAudio.isMuted = !next
-                if (next && isPlaying) {
+                if (next) {
                   engineAudio.start(simulatedRPM)
                 } else {
                   engineAudio.stop()
                 }
               }}
-              title={soundEnabled ? 'Engine Audio Active' : 'Engine Audio Muted'}
-              className={`p-1.5 rounded-md cursor-pointer transition-all ${soundEnabled ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              title={soundEnabled ? 'Click to Mute Engine Audio' : 'Click to Enable Engine Audio'}
+              className={`px-2 py-1 rounded-md cursor-pointer transition-all flex items-center gap-1 text-[10px] font-bold ${
+                soundEnabled 
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' 
+                  : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.08]'
+              }`}
             >
-              {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+              {soundEnabled ? <Volume2 size={12} className="animate-pulse" /> : <VolumeX size={12} />}
+              <span>{soundEnabled ? 'Audio ON' : 'Audio OFF'}</span>
             </button>
           </div>
 
@@ -474,14 +516,22 @@ export function AnimatedVehicleStage({
             type="button"
             onClick={() => {
               if (activeYear >= maxYear && !isPlaying) {
-                onYearSelect(0)
+                if (onYearSelect) onYearSelect(0)
               }
-              setIsPlaying(!isPlaying)
+              const nextPlaying = !isPlaying
+              if (nextPlaying) {
+                setSoundEnabled(true)
+                engineAudio.isMuted = false
+                engineAudio.start(simulatedRPM)
+              } else {
+                engineAudio.stop()
+              }
+              setIsPlaying(nextPlaying)
             }}
-            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/25 cursor-pointer transition-all"
+            className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-black flex items-center gap-1.5 shadow-lg shadow-indigo-500/30 cursor-pointer transition-all"
           >
-            {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-            <span>{isPlaying ? 'Pause' : 'Play Drive'}</span>
+            {isPlaying ? <Pause size={13} /> : <Play size={13} className="fill-white" />}
+            <span>{isPlaying ? 'Pause' : 'Play Drive (Rev Engine)'}</span>
           </button>
 
           {/* Reset Action */}
