@@ -1,6 +1,6 @@
 {
-  "model_version": "2026.08.14",
-  "trained_at": "2026-08-14T16:32:21.937487+00:00",
+  "model_version": "2026.08.15",
+  "trained_at": "2026-08-15T16:52:54.823076+00:00",
   "model_type": "CatBoost_XGBoost_Ensemble",
   "features": [
     "brand",
@@ -15,10 +15,10 @@
     "owner"
   ],
   "metrics": {
-    "r2": 0.9742,
-    "mae": 4263.11,
-    "rmse": 14081.37,
-    "mape": 7.03
+    "r2": 0.9441,
+    "mae": 4379.7,
+    "rmse": 20076.02,
+    "mape": 7.21
   },
   "training_ranges": {
     "power": {
@@ -27,7 +27,7 @@
     },
     "age": {
       "min": 1.0,
-      "max": 63.0
+      "max": 30.0
     },
     "kms_driven": {
       "min": 22.0,
@@ -47,20 +47,16 @@
     "Hero",
     "Honda",
     "Hyosung",
-    "Ideal",
     "Indian",
     "Jawa",
     "KTM",
     "Kawasaki",
-    "LML",
     "MV",
     "Mahindra",
-    "Rajdoot",
     "Royal Enfield",
     "Suzuki",
     "TVS",
     "Triumph",
-    "Yamaha",
-    "Yezdi"
+    "Yamaha"
   ]
 }
