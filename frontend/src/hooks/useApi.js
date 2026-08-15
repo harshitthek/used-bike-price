@@ -208,37 +208,47 @@ function computeClientTrends(vehicleType = 'bike', brandFilter = '') {
   }
 }
 
-function computeClientContract() {
+function computeClientContract(vehicleType = null) {
+  const bikeContract = {
+    vehicle_type: 'bike',
+    ui: {
+      brands: Object.keys(BIKE_BASELINES),
+      brand_power_limits: {
+        'Royal Enfield': [350, 650],
+        'KTM': [125, 390],
+        'Yamaha': [125, 321],
+        'Bajaj': [100, 400],
+        'Honda': [110, 650],
+        'Kawasaki': [250, 1000],
+        'Harley-Davidson': [750, 1800],
+      },
+    },
+  }
+
+  const carContract = {
+    vehicle_type: 'car',
+    ui: {
+      brands: Object.keys(CAR_BASELINES),
+      brand_engine_limits: {
+        'Maruti': [796, 1498],
+        'Hyundai': [998, 1999],
+        'Honda': [1198, 1598],
+        'Toyota': [1197, 2755],
+        'Mahindra': [1197, 2179],
+        'Tata': [1199, 1997],
+        'BMW': [1995, 2993],
+        'Mercedes-Benz': [1950, 2996],
+      },
+    },
+  }
+
+  if (vehicleType === 'car') return carContract
+  if (vehicleType === 'bike') return bikeContract
+
   return {
-    bike: {
-      ui: {
-        brands: Object.keys(BIKE_BASELINES),
-        brand_power_limits: {
-          'Royal Enfield': [350, 650],
-          'KTM': [125, 390],
-          'Yamaha': [125, 321],
-          'Bajaj': [100, 400],
-          'Honda': [110, 650],
-          'Kawasaki': [250, 1000],
-          'Harley-Davidson': [750, 1800],
-        },
-      },
-    },
-    car: {
-      ui: {
-        brands: Object.keys(CAR_BASELINES),
-        brand_engine_limits: {
-          'Maruti': [796, 1498],
-          'Hyundai': [998, 1999],
-          'Honda': [1198, 1598],
-          'Toyota': [1197, 2755],
-          'Mahindra': [1197, 2179],
-          'Tata': [1199, 1997],
-          'BMW': [1995, 2993],
-          'Mercedes-Benz': [1950, 2996],
-        },
-      },
-    },
+    bike: bikeContract,
+    car: carContract,
+    ...bikeContract,
   }
 }
 
@@ -265,8 +275,8 @@ export async function apiFetch(endpoint, options = {}, timeoutMs = DEFAULT_TIMEO
       if (res.status === 422) throw new Error('Some input values are outside allowed limits.')
       if (res.status === 429) throw new Error('Too many requests. Please wait and try again.')
       
-      // If server returned 500 or 503, attempt edge fallback
-      if (res.status >= 500) {
+      // If server returned 404, 500, or 503, attempt edge fallback
+      if (res.status === 404 || res.status >= 500) {
         return handleFallback(endpoint, options)
       }
       throw new Error(errPayload?.detail || `Request failed (${res.status})`)
@@ -325,8 +335,10 @@ function handleFallback(endpoint = '', options = {}) {
     return computeClientTrends(vType, brand)
   }
 
-  if (endpoint.startsWith('/contract') || endpoint.startsWith('/api/v1/contracts')) {
-    return computeClientContract()
+  if (endpoint.startsWith('/contract') || endpoint.startsWith('/api/v1/contracts') || endpoint.startsWith('/contracts')) {
+    const urlParams = new URLSearchParams(endpoint.split('?')[1] || '')
+    const vType = urlParams.get('vehicle_type')
+    return computeClientContract(vType)
   }
 
   if (endpoint.startsWith('/health')) {
