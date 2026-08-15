@@ -22,7 +22,7 @@ High-performance, luxury automotive valuation, lifecycle simulation, and MLOps t
 # 1. Install dependencies
 npm install
 
-# 2. Run Vitest Unit Test Suite (19 passed tests across 9 suites)
+# 2. Run Vitest Unit Test Suite (44 passed tests across 17 suites)
 npm test
 
 # 3. Start local Vite development server
