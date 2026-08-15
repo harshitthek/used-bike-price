@@ -10,8 +10,8 @@
 [![CatBoost](https://img.shields.io/badge/CatBoost-1.2.10-FFCC00?style=for-the-badge&logo=yandex&logoColor=black)](https://catboost.ai)
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-EB5424?style=for-the-badge&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![Test Suite](https://img.shields.io/badge/Pytest-37%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
-[![Vitest](https://img.shields.io/badge/Vitest-19%20Passing-729B1B?style=for-the-badge&logo=vitest&logoColor=white)](frontend/)
+[![Test Suite](https://img.shields.io/badge/Pytest-58%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Vitest](https://img.shields.io/badge/Vitest-29%20Passing-729B1B?style=for-the-badge&logo=vitest&logoColor=white)](frontend/)
 [![Deployment](https://img.shields.io/badge/Vercel-Live%20Demo-black?style=for-the-badge&logo=vercel&logoColor=white)](https://moto-value-ai.vercel.app/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
@@ -559,10 +559,10 @@ docker-compose up --build
 Our continuous integration pipeline enforces rigorous quality gates across the full stack:
 
 ```bash
-# 1. Run all 34 automated Python Pytest unit and integration tests
+# 1. Run all 58 automated Python Pytest unit and integration tests
 pytest
 
-# 2. Run all 13 React Vitest frontend component and hook tests
+# 2. Run all 29 React Vitest frontend component and hook tests
 cd frontend && npm test
 
 # 3. Verify Black PEP-8 code formatting
