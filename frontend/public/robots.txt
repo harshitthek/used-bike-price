@@ -1,0 +1,15 @@
+# AutoValuate AI — Search Engine Crawling Policy
+# https://moto-value-ai.vercel.app/
+
+User-agent: *
+Allow: /
+Allow: /favicon.svg
+Allow: /sitemap.xml
+Allow: /manifest.json
+
+# Disallow internal temporary / api proxy paths
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemaps
+Sitemap: https://moto-value-ai.vercel.app/sitemap.xml

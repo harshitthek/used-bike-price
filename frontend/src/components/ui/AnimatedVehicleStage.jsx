@@ -602,12 +602,19 @@ export function AnimatedVehicleStage({
               {vehicleType === 'bike' ? (
                 /* 🏍️ ACCURATE MOTORCYCLE VECTOR */
                 <div className="relative">
-                  {/* Headlight Beam from Front Lamp */}
+                  {/* High-Intensity Multi-Stage Volumetric Headlamp Beam */}
                   <div 
-                    className="absolute bottom-5 left-24 w-44 h-10 pointer-events-none animate-beam"
+                    className="absolute bottom-2 left-22 w-64 h-16 pointer-events-none animate-beam z-10 opacity-95"
                     style={{
-                      background: 'linear-gradient(90deg, rgba(255,255,255,0.45) 0%, rgba(34,211,238,0.2) 35%, transparent 100%)',
-                      clipPath: 'polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%)'
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.85) 0%, rgba(56,189,248,0.45) 20%, rgba(6,182,212,0.18) 55%, transparent 100%)',
+                      clipPath: 'polygon(0% 45%, 100% 0%, 100% 100%, 0% 55%)'
+                    }}
+                  />
+                  {/* Ambient Ground Road Wash Beam */}
+                  <div 
+                    className="absolute -bottom-1 left-24 w-56 h-6 pointer-events-none blur-md opacity-70"
+                    style={{
+                      background: 'radial-gradient(ellipse at center, rgba(56,189,248,0.45) 0%, rgba(34,211,238,0.15) 60%, transparent 100%)'
                     }}
                   />
 
@@ -687,19 +694,37 @@ export function AnimatedVehicleStage({
                       </g>
                     </g>
 
-                    {/* Front Headlight Bulb */}
-                    <circle cx="98" cy="30" r="3" fill="#ffffff" />
+                    {/* 💡 Prominent LED Projector Headlamp Assembly (Round Modern-Retro Bezel) */}
+                    <g transform="translate(98, 29)">
+                      {/* Outer Chrome / Matte Obsidian Bezel Housing */}
+                      <circle cx="0" cy="0" r="5.5" fill="#0b0f19" stroke="#cbd5e1" strokeWidth="1.2" />
+                      {/* Inner Parabolic Reflector */}
+                      <circle cx="0" cy="0" r="4.4" fill="#1e293b" />
+                      {/* Luminous DRL (Daytime Running Light) Halo Ring */}
+                      <circle cx="0" cy="0" r="3.8" stroke="#38bdf8" strokeWidth="1.2" fill="none" opacity="0.95" />
+                      {/* Central High-Intensity Projector Quartz Lens Core */}
+                      <circle cx="0.4" cy="0" r="2.4" fill="#ffffff" />
+                      {/* Specular Optic Highlight */}
+                      <circle cx="1" cy="-0.7" r="0.8" fill="#e0f2fe" />
+                    </g>
                   </svg>
                 </div>
               ) : (
                 /* 🚗 HANDCRAFTED SLEEK CAR VECTOR */
                 <div className="relative">
-                  {/* Headlight Beam from Front Bumper */}
+                  {/* High-Intensity Multi-Stage Volumetric Matrix-LED Headlamp Beam */}
                   <div 
-                    className="absolute bottom-3 left-36 w-52 h-10 pointer-events-none animate-beam"
+                    className="absolute bottom-1 left-34 w-72 h-18 pointer-events-none animate-beam z-10 opacity-95"
                     style={{
-                      background: 'linear-gradient(90deg, rgba(255,255,255,0.5) 0%, rgba(34,211,238,0.25) 35%, transparent 100%)',
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.85) 0%, rgba(56,189,248,0.45) 25%, rgba(6,182,212,0.18) 60%, transparent 100%)',
                       clipPath: 'polygon(0% 45%, 100% 0%, 100% 100%, 0% 55%)'
+                    }}
+                  />
+                  {/* Ambient Ground Road Wash Beam */}
+                  <div 
+                    className="absolute -bottom-1 left-36 w-64 h-7 pointer-events-none blur-md opacity-70"
+                    style={{
+                      background: 'radial-gradient(ellipse at center, rgba(56,189,248,0.5) 0%, rgba(34,211,238,0.18) 60%, transparent 100%)'
                     }}
                   />
 
@@ -778,9 +803,21 @@ export function AnimatedVehicleStage({
                     {/* Side Mirror */}
                     <path d="M116 31 L122 29 L122 33 Z" fill="#0f172a" stroke="#ffffff" strokeWidth="0.5" />
 
-                    {/* Front Projector LED Headlight */}
-                    <path d="M144 37 L151 38 L149 42 Z" fill="#ffffff" />
-                    <circle cx="147" cy="40" r="1.5" fill="#38bdf8" />
+                    {/* 💡 Prominent Dual Matrix-LED Projector Headlamp Assembly */}
+                    <g transform="translate(141, 33)">
+                      {/* Outer Diamond Casing */}
+                      <path d="M0 2 L13 3.5 L10 11 L0 9 Z" fill="#070b14" stroke="#64748b" strokeWidth="0.8" />
+                      {/* Sweeping L-Shaped DRL Optic Fiber */}
+                      <path d="M1 3 L12 4.2 L10.5 8.5" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      {/* Primary Low-Beam Projector Eye */}
+                      <circle cx="4.2" cy="6.2" r="2.2" fill="#0f172a" stroke="#cbd5e1" strokeWidth="0.6" />
+                      <circle cx="4.2" cy="6.2" r="1.6" fill="#ffffff" />
+                      <circle cx="4.7" cy="5.7" r="0.6" fill="#7dd3fc" />
+                      {/* Secondary High-Beam Laser Projector Eye */}
+                      <circle cx="9" cy="6.8" r="1.9" fill="#0f172a" stroke="#cbd5e1" strokeWidth="0.6" />
+                      <circle cx="9" cy="6.8" r="1.4" fill="#ffffff" />
+                      <circle cx="9.4" cy="6.4" r="0.5" fill="#38bdf8" />
+                    </g>
 
                     {/* Rear LED Taillight Bar */}
                     <path d="M10 38 L15 38 L14 42 Z" fill="#f43f5e" />

@@ -1,0 +1,19 @@
+{
+  "name": "AutoValuate AI — Enterprise Vehicle Valuation Suite",
+  "short_name": "AutoValuate AI",
+  "description": "High-Precision Machine Learning Resale Intelligence & Ownership Lifecycle Simulation for Indian Vehicles",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07080b",
+  "theme_color": "#07080b",
+  "orientation": "any",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

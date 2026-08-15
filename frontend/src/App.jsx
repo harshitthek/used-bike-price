@@ -23,12 +23,23 @@ import { TrendsView } from './views/TrendsView'
 import { AdminDashboard } from './views/AdminDashboard'
 import { HistoryPanel } from './views/HistoryPanel'
 import { CertificateModal } from './views/CertificateModal'
+import { NotFoundView } from './views/NotFoundView'
 import { useValuationHistory } from './hooks/useValuationHistory'
 import { apiGet } from './hooks/useApi'
 
 function App() {
   // Navigation View Modes: 'single' | 'compare' | 'sim' | 'fleet' | 'trends' | 'admin'
-  const [viewMode, setViewMode] = useState('single')
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const requestedView = params.get('view')
+      if (requestedView === 'simulator') return 'sim'
+      if (['single', 'compare', 'sim', 'fleet', 'trends', 'admin'].includes(requestedView)) {
+        return requestedView
+      }
+    }
+    return 'single'
+  })
   const [vehicleType, setVehicleType] = useState('bike')
 
   // Global Valuation Form State
@@ -276,6 +287,10 @@ function App() {
 
         {viewMode === 'admin' && (
           <AdminDashboard />
+        )}
+
+        {!['single', 'compare', 'sim', 'fleet', 'trends', 'admin'].includes(viewMode) && (
+          <NotFoundView onNavigate={(target) => setViewMode(target === 'simulator' ? 'sim' : target)} />
         )}
       </main>
 
