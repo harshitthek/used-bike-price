@@ -555,3 +555,48 @@ def test_reload_models_endpoint():
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "success"
+
+
+def test_legacy_aliases_contracts_and_types():
+    # 1. /contracts alias
+    res1 = client.get("/contracts")
+    assert res1.status_code == 200
+    assert res1.json()["vehicle_type"] == "bike"
+
+    # 2. Legacy vehicle type query parameters
+    res2 = client.get("/contract?vehicle_type=motorcycle")
+    assert res2.status_code == 200
+    assert res2.json()["vehicle_type"] == "bike"
+
+    res3 = client.get("/contract?vehicle_type=passenger_car")
+    assert res3.status_code == 200
+    assert res3.json()["vehicle_type"] == "car"
+
+
+def test_legacy_widget_endpoints():
+    res1 = client.get("/api/v1/demo/motovalue-widget.js")
+    assert res1.status_code == 200
+    assert "motovalue-portfolio-widget" in res1.text
+
+    res2 = client.get("/api/v1/demo/moto-value-widget.js")
+    assert res2.status_code == 200
+    assert "autovaluate-portfolio-widget" in res2.text
+
+
+def test_legacy_vehicle_type_in_prediction_payload():
+    res = client.post(
+        "/predict",
+        headers={"x-api-key": "dev_12345"},
+        json={
+            "vehicle_type": "motorcycle",
+            "brand": "Royal Enfield",
+            "power": 350,
+            "kms_driven": 15000,
+            "age": 3,
+            "owner_rank": 1,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["estimated_price"] > 0
+    assert data["vehicle_type"] == "bike"

@@ -7,12 +7,37 @@ and tests.
 
 from __future__ import annotations
 
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Supported vehicle types
 VEHICLE_TYPES: Tuple[str, ...] = ("bike", "car")
+
+
+def normalize_vehicle_type_str(v: Any) -> str:
+    """Normalize vehicle type strings, accepting legacy and alias terms.
+
+    Supports 'motorcycle', '2-wheeler', 'passenger_car', 'automobile', etc.
+    """
+    if not isinstance(v, str):
+        return "bike"
+    clean = v.strip().lower().replace("-", "_").replace(" ", "_").replace("/", "_")
+    if clean in (
+        "car",
+        "cars",
+        "automobile",
+        "passenger_car",
+        "four_wheeler",
+        "4_wheeler",
+        "4wheeler",
+        "sedan",
+        "suv",
+        "hatchback",
+    ):
+        return "car"
+    return "bike"
+
 
 # Annual usage estimates for forecasting
 ANNUAL_KM_BIKE: float = 6000.0
@@ -311,6 +336,11 @@ class UniversalVehicleInput(BaseModel):
     age: float = Field(..., ge=0, le=50)
     owner_rank: int = Field(..., ge=1, le=5)
 
+    @field_validator("vehicle_type", mode="before")
+    @classmethod
+    def normalize_vtype(cls, v):
+        return normalize_vehicle_type_str(v)
+
 
 class PriceRange(BaseModel):
     min: float
@@ -385,6 +415,11 @@ class SimulationRequest(BaseModel):
     annual_kms: float = Field(10000.0, ge=1000.0, le=60000.0)
     custom_fuel_price: Optional[float] = Field(None, ge=1.0, le=300.0)
     custom_mileage_kml: Optional[float] = Field(None, ge=1.0, le=100.0)
+
+    @field_validator("vehicle_type", mode="before")
+    @classmethod
+    def normalize_vtype(cls, v):
+        return normalize_vehicle_type_str(v)
 
 
 class YearlySimulationPoint(BaseModel):

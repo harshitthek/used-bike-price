@@ -406,7 +406,7 @@ To provide comprehensive automotive fintech intelligence, we built an interactiv
 - **Pure Vector jsPDF Engine**: Eliminated DOM-crawler thread freezes by generating instantaneous in-memory vector certificates with multi-browser download fallbacks.
 - **MLOps Telemetry & PSI Drift**: Implemented real-time Population Stability Index (PSI) tracking against training data distributions with `/admin/drift-report` and zero-downtime hot reloading.
 - **Retraining CLI**: Created `python -m src.retrain` CLI utility with automated model backups.
-- **Full Parity Verification**: **34 Pytest tests + 18 Vitest tests** passing in CI/CD pipeline.
+- **Full Parity Verification**: **37 Pytest tests + 19 Vitest tests** passing in CI/CD pipeline with comprehensive backward-compatibility for legacy aliases.
 
 
 

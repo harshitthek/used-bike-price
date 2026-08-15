@@ -13,6 +13,29 @@ describe('useValuationHistory Hook Suite', () => {
     expect(result.current.history).toEqual([])
   })
 
+  it('seamlessly migrates legacy motovalue_history storage key', () => {
+    const legacyData = [
+      {
+        id: 'legacy-1',
+        vehicleType: 'bike',
+        brand: 'Bajaj',
+        estimatedPrice: 75000,
+        savedAt: '2026-08-10T10:00:00.000Z'
+      }
+    ]
+    localStorage.setItem('motovalue_history', JSON.stringify(legacyData))
+
+    const { result } = renderHook(() => useValuationHistory())
+    expect(result.current.history.length).toBe(1)
+    expect(result.current.history[0].brand).toBe('Bajaj')
+    expect(result.current.history[0].estimatedPrice).toBe(75000)
+
+    // Should have migrated into autovaluate_history
+    const migrated = JSON.parse(localStorage.getItem('autovaluate_history'))
+    expect(migrated.length).toBe(1)
+    expect(migrated[0].brand).toBe('Bajaj')
+  })
+
   it('saves a valuation entry and stores it in localStorage', () => {
     const { result } = renderHook(() => useValuationHistory())
 

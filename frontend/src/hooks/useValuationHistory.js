@@ -1,16 +1,35 @@
 /**
  * useValuationHistory.js — Browser localStorage CRUD for saved valuations
  * Stores up to 20 recent valuations locally. No backend auth needed.
+ * Supports legacy storage keys ('motovalue_history', 'used_vehicle_history') for seamless data retention.
  */
 import { useState, useCallback } from 'react'
 
 const STORAGE_KEY = 'autovaluate_history'
+const LEGACY_STORAGE_KEYS = ['motovalue_history', 'moto_value_history', 'used_vehicle_history', 'used_bike_history']
 const MAX_ITEMS = 20
 
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    if (raw) return JSON.parse(raw)
+
+    // Backward compatibility: seamlessly migrate from older keys if present
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
+      const legacyRaw = localStorage.getItem(legacyKey)
+      if (legacyRaw) {
+        try {
+          const parsed = JSON.parse(legacyRaw)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localStorage.setItem(STORAGE_KEY, legacyRaw)
+            return parsed
+          }
+        } catch {
+          // ignore corrupted legacy items
+        }
+      }
+    }
+    return []
   } catch {
     return []
   }

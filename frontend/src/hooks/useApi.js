@@ -1,10 +1,23 @@
 /**
  * useApi.js — Shared fetch helper for AutoValuate AI frontend
  * Centralizes API calls with res.ok validation, timeout, API key injection, and error extraction.
+ * Backward compatible with legacy environment variables and endpoints.
  */
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
-const API_KEY = import.meta.env.VITE_API_KEY || 'dev_12345'
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.REACT_APP_API_URL ||
+  'http://127.0.0.1:8000'
+).replace(/\/$/, '')
+
+const API_KEY =
+  import.meta.env.VITE_API_KEY ||
+  import.meta.env.VITE_ADMIN_KEY ||
+  import.meta.env.VITE_AUTH_KEY ||
+  'dev_12345'
+
 const DEFAULT_TIMEOUT_MS = 10000
 
 /**

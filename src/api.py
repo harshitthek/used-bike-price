@@ -8,7 +8,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Literal, Optional, Tuple, cast
+from typing import Any, List, Optional, Tuple, cast
 
 import joblib
 import pandas as pd
@@ -58,6 +58,7 @@ from src.contracts import (
     UniversalVehicleInput,
     WaterfallItem,
     YearlySimulationPoint,
+    normalize_vehicle_type_str,
 )
 from src.feature_engineering import DERIVED_NUMERIC_FEATURES
 from src.logging_config import setup_logging
@@ -181,22 +182,23 @@ def _load_artifacts():
 
 def get_model(vehicle_type: str = "bike") -> Tuple[Any, Optional[dict]]:
     global bike_model, car_model
-    if (vehicle_type == "bike" and bike_model is not None) or (
-        vehicle_type == "car" and car_model is not None
+    v_norm = normalize_vehicle_type_str(vehicle_type)
+    if (v_norm == "bike" and bike_model is not None) or (
+        v_norm == "car" and car_model is not None
     ):
         return (
             (bike_model, bike_metadata)
-            if vehicle_type == "bike"
+            if v_norm == "bike"
             else (car_model, car_metadata)
         )
 
     with _model_lock:
-        if (vehicle_type == "bike" and bike_model is None) or (
-            vehicle_type == "car" and car_model is None
+        if (v_norm == "bike" and bike_model is None) or (
+            v_norm == "car" and car_model is None
         ):
             _load_artifacts()
 
-    if vehicle_type == "car":
+    if v_norm == "car":
         return car_model, car_metadata
     return bike_model, bike_metadata
 
@@ -772,11 +774,13 @@ def ready():
 
 
 @app.get("/contract")
+@app.get("/contracts")
+@app.get("/api/v1/contract")
+@app.get("/api/v1/contracts")
 @limiter.limit("30/minute")
-def contract_check(
-    request: Request, vehicle_type: Literal["bike", "car"] = Query("bike")
-):
-    if vehicle_type == "car":
+def contract_check(request: Request, vehicle_type: str = Query("bike")):
+    v_norm = normalize_vehicle_type_str(vehicle_type)
+    if v_norm == "car":
         return {
             "vehicle_type": "car",
             "features": list(CAR_PREDICTION_FEATURES),
@@ -1019,7 +1023,7 @@ def _build_demo_response(
 @limiter.limit("60/minute")
 def demo_estimate_get(
     request: Request,
-    vehicle_type: Literal["bike", "car"] = Query("bike"),
+    vehicle_type: str = Query("bike"),
     brand: str = Query("Royal Enfield"),
     power: Optional[float] = Query(None, description="Displacement in CC (bikes)"),
     engine_cc: Optional[float] = Query(None, description="Engine CC (cars)"),
@@ -1030,13 +1034,14 @@ def demo_estimate_get(
     transmission: str = Query("Manual"),
 ):
     """Public GET endpoint for portfolio websites and client fetch demos."""
+    v_type = normalize_vehicle_type_str(vehicle_type)
     eff_power = (
         power
         if power is not None
         else (
             engine_cc
             if engine_cc is not None
-            else (350.0 if vehicle_type == "bike" else 1197.0)
+            else (350.0 if v_type == "bike" else 1197.0)
         )
     )
     eff_engine = engine_cc if engine_cc is not None else eff_power
@@ -1163,10 +1168,17 @@ def demo_estimate_post(request: Request, payload: UniversalVehicleInput):
 
 
 @app.get("/api/v1/demo/widget.js")
+@app.get("/api/v1/demo/motovalue-widget.js")
+@app.get("/api/v1/demo/moto-value-widget.js")
+@app.get("/api/v1/demo/used-bike-widget.js")
 def demo_widget_script():
     """Drop-in 1-line JavaScript widget for embedding live AI appraisals in portfolio pages."""
     script_content = """(function() {
-  const container = document.getElementById('autovaluate-portfolio-widget');
+  const container = document.getElementById('autovaluate-portfolio-widget')
+    || document.getElementById('motovalue-portfolio-widget')
+    || document.getElementById('moto-value-widget')
+    || document.getElementById('used-bike-price-widget')
+    || document.getElementById('bike-price-widget');
   if (!container) return;
 
   const currentScript = document.currentScript;
@@ -1548,7 +1560,7 @@ def simulate_lifecycle_post(request: Request, payload: SimulationRequest):
 @limiter.limit("60/minute")
 def demo_simulate_get(
     request: Request,
-    vehicle_type: Literal["bike", "car"] = Query("bike"),
+    vehicle_type: str = Query("bike"),
     brand: str = Query("Royal Enfield"),
     power: Optional[float] = Query(None),
     engine_cc: Optional[float] = Query(None),
@@ -1558,8 +1570,9 @@ def demo_simulate_get(
     fuel: str = Query("Petrol"),
 ):
     """Public demo simulation endpoint for portfolio calculators and interactive visualizers."""
+    v_norm = normalize_vehicle_type_str(vehicle_type)
     req = SimulationRequest(
-        vehicle_type=vehicle_type,
+        vehicle_type=v_norm,
         brand=brand,
         power=power,
         engine_cc=engine_cc,
@@ -1575,15 +1588,18 @@ def demo_simulate_get(
 
 
 @app.get("/api/v1/trends")
+@app.get("/trends")
 @limiter.limit("60/minute")
 def trends_endpoint(
     request: Request,
-    vehicle_type: Literal["bike", "car"] = Query("bike"),
+    vehicle_type: str = Query("bike"),
     brand: Optional[str] = Query(None),
-    metric: Literal["median", "mean"] = Query("median"),
+    metric: str = Query("median"),
 ):
     """Historical transaction price trends, statistical percentiles, and market volume by brand & year."""
-    return get_trends(vehicle_type=vehicle_type, brand=brand, metric=metric)
+    v_norm = normalize_vehicle_type_str(vehicle_type)
+    m_norm = "mean" if str(metric).lower() in ("mean", "average", "avg") else "median"
+    return get_trends(vehicle_type=v_norm, brand=brand, metric=m_norm)
 
 
 @app.post("/certificates/generate")

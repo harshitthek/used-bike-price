@@ -30,5 +30,5 @@ graph TD
 The repository uses GitHub Actions (`.github/workflows/ci.yml`) for continuous integration.
 
 1. **Linting and Formatting**: Enforces `ruff` (for linting) and `black` (for formatting) to ensure codebase consistency.
-2. **Testing**: Runs the full `pytest` suite (34 tests) to verify API contracts, preprocessing, feature engineering, and frontend contract alignment.
+2. **Testing**: Runs the full `pytest` suite (37 tests) to verify API contracts, preprocessing, feature engineering, and frontend contract alignment.
 3. **Build Verification**: Attempts to build the Docker container to ensure the `Dockerfile` remains valid and dependencies resolve correctly.
