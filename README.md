@@ -67,7 +67,7 @@
     </td>
     <td width="50%">
       <h3>📜 1-Click PDF Valuation Certificate</h3>
-      Client-side vector PDF generation engine (<code>html2pdf.js</code>) creating official verification certificates with verification ID, vehicle specs, and 5-year depreciation schedules.
+      Instantaneous in-memory vector PDF generator (<code>jsPDF</code>) creating official verification certificates with cryptographic hash ID, vehicle specs, and 5-year depreciation schedules in &lt;5ms.
     </td>
   </tr>
   <tr>
@@ -402,6 +402,54 @@ curl -X POST "http://127.0.0.1:8000/predict/batch" \
 
 ---
 
+### 5. Historical Market Price Trends (`GET /api/v1/trends`)
+Retrieves empirical market depreciation curves, 25th-75th percentile transaction corridors, and sample volumes across vehicle manufacture years.
+
+```bash
+# Query motorcycle trends
+curl -X GET "http://127.0.0.1:8000/api/v1/trends?vehicle_type=bike&brand=Royal%20Enfield&metric=median"
+
+# Query passenger car trends
+curl -X GET "http://127.0.0.1:8000/api/v1/trends?vehicle_type=car&brand=Maruti&metric=median"
+```
+
+---
+
+### 6. Cryptographic Valuation Certificates (`POST /certificates/generate` & `GET /certificates/{hash_id}`)
+Generates and persists immutable appraisal records referenced by an 8-character SHA-256 hash ID.
+
+```bash
+# Generate certificate
+curl -X POST "http://127.0.0.1:8000/certificates/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vehicle_type": "bike",
+    "brand": "Royal Enfield",
+    "input": {"power": 350, "kms_driven": 15000, "age": 3, "owner_rank": 1},
+    "result": {"estimated_price": 142000, "confidence": "high"}
+  }'
+
+# Retrieve verified certificate
+curl -X GET "http://127.0.0.1:8000/certificates/A7F39D12"
+```
+
+---
+
+### 7. MLOps Telemetry & Drift Monitoring (`GET /admin/drift-report` & `POST /admin/reload-models`)
+Real-time Population Stability Index (PSI) tracking against training baseline distributions and zero-downtime hot reloading.
+
+```bash
+# Live PSI drift telemetry
+curl -X GET "http://127.0.0.1:8000/admin/drift-report" \
+  -H "x-api-key: dev_12345"
+
+# Zero-downtime artifact reload
+curl -X POST "http://127.0.0.1:8000/admin/reload-models" \
+  -H "x-api-key: dev_12345"
+```
+
+---
+
 ## ⚡ Quickstart & Local Installation
 
 ### Prerequisites
@@ -476,7 +524,7 @@ cd frontend && npm run build
 ```text
 used-bike-price/
 ├── .github/workflows/ci.yml       # Parallel GitHub Actions CI/CD Pipeline
-├── architecture/adr/              # Architecture Decision Records (ADRs 001 - 007)
+├── architecture/adr/              # Architecture Decision Records (ADRs 001 - 008)
 ├── data/                          # Authentic Datasets
 │   ├── Used_Bikes.csv             # 32,000+ Indian motorcycle listings
 │   └── Used_Cars.csv              # 8,000+ Indian passenger car listings

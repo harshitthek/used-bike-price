@@ -380,7 +380,7 @@ We upgraded the machine learning core from standalone gradient boosted models to
 ## 25. Phase 20 — Production Docker & Vector PDF Engine
 - Created multi-stage `Dockerfile` (`node:20-alpine` frontend build $\to$ `python:3.11-slim-bookworm` backend runtime with OpenMP acceleration).
 - Single-command orchestration via `docker-compose.yml`.
-- Integrated `html2pdf.js` with dynamic code-splitting for 1-click vector PDF inspection certificate generation.
+- Integrated pure in-memory `jsPDF` vector rendering for 1-click instantaneous PDF inspection certificate generation without DOM thread locks.
 
 ## 27. Phase 22 — Car & Bike Ownership Lifecycle & Market Simulator Engine
 To provide comprehensive automotive fintech intelligence, we built an interactive **Ownership Lifecycle & Market Simulator**:
