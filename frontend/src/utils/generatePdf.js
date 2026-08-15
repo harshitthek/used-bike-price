@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf'
 /**
  * generateCertificatePdf — Pure vector PDF generator using jsPDF.
  * Zero DOM dependencies, zero CSS parsing, zero thread freezing.
- * Generates and downloads a luxury automotive valuation certificate in <5ms.
+ * Generates and triggers instant PDF file download with multi-browser fallbacks.
  */
 export function generateCertificatePdf({ result, formData, vehicleType }) {
   const doc = new jsPDF({
@@ -205,7 +205,29 @@ export function generateCertificatePdf({ result, formData, vehicleType }) {
   doc.text(`Digital Verification Signature: SHA-256 [${certId.replace('-', '')}89F4]`, 28, 258)
   doc.text('Authorized by AutoValuate AI Resale Intelligence Systems (https://moto-value-ai.vercel.app)', 28, 263)
 
-  // Save the document
-  const fileName = `AutoValuate_Certificate_${brand}_${vType}.pdf`
-  doc.save(fileName)
+  // 8. Robust Trigger Download (Blob + Anchor fallback + doc.save fallback)
+  const fileName = `AutoValuate_Certificate_${brand.replace(/\s+/g, '_')}_${vType}.pdf`
+
+  try {
+    const pdfBlob = doc.output('blob')
+    const blobUrl = URL.createObjectURL(pdfBlob)
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.href = blobUrl
+    downloadAnchor.setAttribute('download', fileName)
+    downloadAnchor.style.display = 'none'
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    
+    setTimeout(() => {
+      try {
+        document.body.removeChild(downloadAnchor)
+        URL.revokeObjectURL(blobUrl)
+      } catch {}
+    }, 1500)
+  } catch (blobErr) {
+    console.warn('Blob download fallback to doc.save:', blobErr)
+    doc.save(fileName)
+  }
+
+  return true
 }

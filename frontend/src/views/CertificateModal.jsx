@@ -22,6 +22,7 @@ export function CertificateModal({
   vehicleType
 }) {
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [downloadSuccess, setDownloadSuccess] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
   const [shareError, setShareError] = useState(null)
@@ -55,6 +56,8 @@ export function CertificateModal({
 
     try {
       generateCertificatePdf({ result, formData, vehicleType })
+      setDownloadSuccess(true)
+      setTimeout(() => setDownloadSuccess(false), 3000)
     } catch (err) {
       console.error('PDF generation error:', err)
     } finally {
@@ -181,10 +184,9 @@ export function CertificateModal({
               disabled={downloadingPdf}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer text-xs shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-colors"
             >
-              {downloadingPdf ? (
+              {downloadSuccess ? (
                 <>
-                  <div className="h-3.5 w-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  Generating PDF...
+                  <Check size={14} className="text-white animate-in zoom-in-50 duration-200" /> PDF Saved!
                 </>
               ) : (
                 <>
