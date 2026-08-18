@@ -136,3 +136,13 @@ def test_batch_prediction_validation():
         assert "summary" in data
         assert data["summary"]["vehicle_count"] == 2
         assert len(data["predictions"]) == 2
+
+
+def test_owasp_security_headers_present():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.headers.get("x-content-type-options") == "nosniff"
+    assert response.headers.get("x-frame-options") == "SAMEORIGIN"
+    assert response.headers.get("x-xss-protection") == "0"
+    assert response.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+    assert "camera=()" in response.headers.get("permissions-policy", "")

@@ -37,7 +37,7 @@ jobs:
       run: |
         ruff check src tests
 
-    - name: Run Pytest Suite (58 tests)
+    - name: Run Pytest Suite (59 tests)
       run: |
         python -m pytest tests/ --import-mode=importlib
 
